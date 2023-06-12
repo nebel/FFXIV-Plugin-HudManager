@@ -395,6 +395,11 @@ namespace HUD_Manager
 
             if (status > 0) {
                 var flag = (ConditionFlag)status;
+                // TODO fix me, just for testing
+                if (flag == ConditionFlag.Mounted)
+                {
+                    return false;
+                }
                 return plugin.Condition[flag];
             }
 
@@ -406,6 +411,7 @@ namespace HUD_Manager
                 case Status.PlayingMusic:
                     return plugin.Condition[ConditionFlag.Performing];
                 case Status.InPvp:
+                    return plugin.ClientState.IsPvP;
                     return plugin.Statuses.InPvpZone;
                 case Status.InDialogue:
                     return plugin.Condition[ConditionFlag.OccupiedInEvent]
@@ -418,6 +424,7 @@ namespace HUD_Manager
                 case Status.InSanctuary:
                     return plugin.Statuses.IsInSanctuary();
                 case Status.ChatFocused:
+                    return false;
                     return plugin.Statuses.IsChatFocused();
                 case Status.InputModeKbm:
                     return !Util.GamepadModeActive();

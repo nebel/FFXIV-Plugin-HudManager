@@ -357,7 +357,9 @@ namespace HUD_Manager
 
         private uint SetHudLayoutDetour(IntPtr filePtr, uint hudLayout, byte unk0, byte unk1)
         {
+            PluginLog.Warning($"SetHudLayoutDetour(0x{filePtr:X}, {hudLayout}, {unk0}, {unk1})");
             var res = this._setHudLayoutHook.Original(filePtr, hudLayout, unk0, unk1);
+            // vvvvvvvvvvvvvvvvvvv
             this.Plugin.PetHotbar.ResetPetHotbar();
             return res;
         }

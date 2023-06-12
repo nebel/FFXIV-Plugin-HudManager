@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 
 namespace HUD_Manager
 {
@@ -103,27 +104,83 @@ namespace HUD_Manager
                 }
 
                 Plugin.Statuses.CustomConditionStatus[cond] = val.Value;
-            } else if (argsList[0] == "swapper") {
-                if (argsList.Length != 2) {
+            } else if (argsList[0] == "swapper")
+            {
+                if (argsList.Length != 2)
+                {
                     Plugin.ChatGui.PrintError("Invalid arguments.");
                     return;
                 }
 
                 bool? val = null;
-                if (argsList[1] == "true" || argsList[1] == "on") {
+                if (argsList[1] == "true" || argsList[1] == "on")
+                {
                     val = true;
-                } else if (argsList[1] == "false" || argsList[1] == "off") {
+                }
+                else if (argsList[1] == "false" || argsList[1] == "off")
+                {
                     val = false;
-                } else if (argsList[1] == "toggle") {
+                }
+                else if (argsList[1] == "toggle")
+                {
                     val = !Plugin.Config.SwapsEnabled;
                 }
 
-                if (!val.HasValue) {
+                if (!val.HasValue)
+                {
                     Plugin.ChatGui.PrintError($"Invalid setting \"{argsList[1]}\".");
                     return;
                 }
 
                 Plugin.Config.SwapsEnabled = val.Value;
+            } else if (argsList[0] == "debug") {
+                if (argsList[1] == "pre")
+                {
+                    Plugin.PetHotbar.ResetPetHotbarDetour();
+                }
+                else if (argsList[1] == "fake")
+                {
+                    Plugin.PetHotbar.SetupPetHotbarFakeDetour(Plugin.PetHotbar.GetManagerThing(), 0);
+                }
+                else if (argsList[1] == "real")
+                {
+                    Plugin.PetHotbar.SetupPetHotbarRealDetour(Plugin.PetHotbar.GetManagerThing(),
+                        uint.Parse(argsList[2]));
+                }
+                else if (argsList[1] == "double")
+                {
+                    Plugin.PetHotbar.SetupPetHotbarRealDetour(Plugin.PetHotbar.GetManagerThing(), uint.Parse(argsList[2]));
+                    Plugin.PetHotbar.ResetPetHotbarDetour();
+
+                }
+                else if (argsList[1] == "char")
+                {
+                    unsafe
+                    {
+                        var control = FFXIVClientStructs.FFXIV.Client.Game.Control.Control.Instance();
+                        var lp = control->LocalPlayer;
+                        PluginLog.Information($"LP ADDR: 0x{(IntPtr)lp:X}");
+                        var character = lp->Character;
+                        PluginLog.Information($"LP TF: {character.TransformationId}");
+                    }
+                }
+                else if (argsList[1] == "hb")
+                {
+                    unsafe
+                    {
+                        var rapt = RaptureHotbarModule.Instance();
+                        var hb1 = rapt->HotBar[0];
+                        PluginLog.Information($"HB0: 0x{(IntPtr)hb1:X}");
+                        for (int i = 0; i <= 15; i++)
+                        {
+                            PluginLog.Information($" S{i}: {hb1->Slot[i]->CommandType}");
+                        }
+                    }
+                }
+                else
+                {
+                    Plugin.ChatGui.PrintError($"Invalid debug command.");
+                }
             } else {
                 Plugin.ChatGui.PrintError($"Invalid subcommand \"{argsList[0]}\".");
             }
