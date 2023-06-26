@@ -163,8 +163,10 @@ namespace HUD_Manager
                 if (!dict.TryGetValue(slotLayout.elements[i].id, out var element))
                     continue;
 
-                if (element.Id == ElementKind.Minimap && reloadIfNecessary) {
-                    // Don't load minimap zoom/rotation from HUD settings but use current UI state instead
+                if (element.Id is ElementKind.Minimap or ElementKind.Hotbar1 && reloadIfNecessary) {
+                    // Minimap: Don't load zoom/rotation from HUD settings but use current UI state instead
+                    // Hotbar1: Same to keep cycling state
+                    // Might consider this for all elements with non-HM option configurability...? Not sure how buffs etc would behave.
                     element.Options = slotLayout.elements[i].options;
                 }
 
