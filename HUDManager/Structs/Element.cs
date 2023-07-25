@@ -17,6 +17,8 @@ namespace HUD_Manager.Structs
 
         public ElementComponent Enabled { get; set; } = AllEnabled;
 
+        public bool PositionNestedElement { get; set; } = false;
+
         public float X { get; set; }
 
         public float Y { get; set; }

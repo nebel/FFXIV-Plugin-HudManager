@@ -88,11 +88,75 @@ namespace HUD_Manager.Ui
             {
                 ElementKind.TargetInfoProgressBar => ConvertGameToImGui(element, 246, 10, 204, 24, 1),
                 ElementKind.TargetInfoStatus => ConvertGameToImGui(element, 13, 45, 375, 82, 1),
-                ElementKind.TargetInfoHp => ConvertGameToImGui(element, 0, 0, -1, -1, 0.5f),
+                ElementKind.TargetInfoHp => ConvertGameToImGui(element, 0, 0, -1, 64, 1),
                 _ => null
             };
 
             return new OverlayPosition(ConvertGameToImGui(element, 0, 0, -1, -1, 1), inner);
+        }
+
+        public static Tuple<Vector2, Vector2> ConvertGameToImGuiNested(Element element)
+        {
+            var nestedFrame = NestedNodeOffsets.ForElement(element);
+            // get X & Y coords from the element, which are percentages (0 - 100)
+            var percentagePos = new Vector2(element.X, element.Y);
+
+            // get size in pixels
+            Vector2 size;
+            if (nestedFrame != null) {
+                size = new Vector2(nestedFrame.Width, nestedFrame.Height);
+            }
+            else {
+                size = new Vector2(element.Width, element.Height);
+            }
+            // scale size according to the element's scale
+            size.X = (float)Math.Round(size.X * element.Scale);
+            size.Y = (float)Math.Round(size.Y * element.Scale);
+
+            // convert the percentages into pixels
+            var screen = ImGui.GetIO().DisplaySize;
+            var pixelPos = new Vector2(
+                (float)Math.Round(percentagePos.X * screen.X / 100),
+                (float)Math.Round(percentagePos.Y * screen.Y / 100)
+            );
+
+            // split the measured from into x and y parts
+            var (xMeasure, yMeasure) = element.MeasuredFrom.ToParts();
+
+            // determine subtraction values to make the coords point to the top left
+            var subX = xMeasure switch
+            {
+                MeasuredX.Left => 0,
+                MeasuredX.Middle => size.X / 2,
+                MeasuredX.Right => size.X,
+                _ => throw new ArgumentOutOfRangeException(),
+            };
+
+            if (nestedFrame != null) {
+                subX -= nestedFrame.OffsetX * element.Scale;
+            }
+
+            var subY = yMeasure switch
+            {
+                MeasuredY.Top => 0,
+                MeasuredY.Middle => size.Y / 2,
+                MeasuredY.Bottom => size.Y,
+                _ => throw new ArgumentOutOfRangeException(),
+            };
+
+            if (nestedFrame != null) {
+                subY -= nestedFrame.OffsetY * element.Scale;
+            }
+
+            // transform coords to top left for ImGui
+            pixelPos.X -= subX;
+            pixelPos.Y -= subY;
+
+            // round the coords
+            pixelPos.X = (float)Math.Round(pixelPos.X);
+            pixelPos.Y = (float)Math.Round(pixelPos.Y);
+
+            return Tuple.Create(pixelPos, size);
         }
 
         private static Tuple<Vector2, Vector2> ConvertGameToImGui(Element element, int offsetX, int offsetY, int innerWidth, int innerHeight, float heightScale)

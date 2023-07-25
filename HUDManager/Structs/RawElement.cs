@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using Dalamud.Logging;
 
 namespace HUD_Manager.Structs
 {
@@ -47,6 +48,15 @@ namespace HUD_Manager.Structs
             this.unknown6 = element.Unknown6;
             this.opacity = element.Opacity;
             this.unknown8 = element.Unknown8;
+
+            PluginLog.Information($"E: {element.Id} x:{x} y:{y}");
+
+            // if (element.PositionNestedElement) {
+            //     var offsets = NestedNodeOffsets.ForElement(element);
+            //     if (offsets != null) {
+            //         this.x -= element.
+            //     }
+            // }
         }
 
         public void UpdateEnabled(Element element)
