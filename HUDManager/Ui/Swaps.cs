@@ -269,8 +269,12 @@ namespace HUD_Manager.Ui
                     }
 
                     ImGui.SameLine();
-                    if (ImGuiExt.IconButton(FontAwesomeIcon.Trash, $"{item.i}")) {
-                        actionedItemIndex = item.i;
+                    ImGuiExt.IconButton(FontAwesomeIcon.TrashAlt, $"{item.i}");
+                    if (ImGui.BeginPopupContextItem(null, ImGuiPopupFlags.MouseButtonLeft)) {
+                        if (ImGui.Button("Confirm deletion")) {
+                            actionedItemIndex = item.i;
+                        }
+                        ImGui.EndPopup();
                     }
 
                     ImGui.SameLine();
