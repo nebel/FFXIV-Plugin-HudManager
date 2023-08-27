@@ -166,14 +166,18 @@ namespace HUDManager.Ui
 
             ImGui.SameLine();
 
-            if (ImGuiExt.IconButton(FontAwesomeIcon.Trash) && ui.selectedIndex >= 0 && ui.selectedIndex < items.Length) {
-                if (Plugin.Config.HudConditionMatches.Exists(c => c.CustomCondition == activeCondition)) {
-                    ImGui.OpenPopup(Popups.CannotRemoveCustomCondition);
-                } else {
-                    Plugin.Config.CustomConditions.RemoveAt(ui.selectedIndex);
-                    ui.selectedIndex = -1;
-                    update = true;
+            ImGuiExt.IconButton(FontAwesomeIcon.TrashAlt);
+            if (ui.selectedIndex >= 0 && ui.selectedIndex < items.Length && ImGui.BeginPopupContextItem(null, ImGuiPopupFlags.MouseButtonLeft)) {
+                if (ImGui.Button("Confirm deletion")) {
+                    if (Plugin.Config.HudConditionMatches.Exists(c => c.CustomCondition == activeCondition)) {
+                        ImGui.OpenPopup(Popups.CannotRemoveCustomCondition);
+                    } else {
+                        Plugin.Config.CustomConditions.RemoveAt(ui.selectedIndex);
+                        ui.selectedIndex = -1;
+                        update = true;
+                    }
                 }
+                ImGui.EndPopup();
             }
 
             bool _b = true;
