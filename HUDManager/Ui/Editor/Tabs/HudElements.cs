@@ -182,7 +182,7 @@ namespace HUD_Manager.Ui.Editor.Tabs
                 ImGui.TableSetupColumn("Control", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableHeadersRow();
 
-                ImGui.SameLine(ImGui.GetContentRegionAvail().X - ImGui.GetStyle().ItemInnerSpacing.X - ImGui.GetStyle().ItemSpacing.X * 6);
+                ImGui.SameLine(ImGui.GetContentRegionAvail().X - ImGui.GetFrameHeight() * 2 - ImGui.GetStyle().ItemSpacing.X);
 
                 var previewing = this.Editor.Previews.Elements.Contains(kind);
                 if (previewing)
@@ -199,7 +199,7 @@ namespace HUD_Manager.Ui.Editor.Tabs
 
                 ImGuiExt.HoverTooltip("Toggle a movable preview for this element");
 
-                ImGui.SameLine(ImGui.GetContentRegionAvail().X - ImGui.GetStyle().ItemSpacing.X * 3);
+                ImGui.SameLine(ImGui.GetContentRegionAvail().X - ImGui.GetFrameHeight());
                 if (ImGuiExt.IconButtonEnabledWhen(ImGui.GetIO().KeyCtrl, FontAwesomeIcon.TrashAlt, $"uimanager-remove-element-{kind}")) {
                     toRemove.Add(kind);
                     update = true;
