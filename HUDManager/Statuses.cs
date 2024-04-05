@@ -9,6 +9,7 @@ using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using HUDManager;
 using HUDManager.Configuration;
 using Newtonsoft.Json;
@@ -170,27 +171,9 @@ namespace HUD_Manager
             return GameMain.IsInSanctuary();
         }
 
-        public bool IsChatFocused()
+        public unsafe bool IsChatFocused()
         {
-            const uint ChatLogNodeId = 5;
-            const uint ChatEntryNodeId = 2;
-
-            var chatLog = Plugin.GameGui.GetAtkUnitByName("ChatLog", 1);
-            if (chatLog is null)
-                return false;
-
-            unsafe {
-                // Updated 6.08
-                var textInput = chatLog.Value.GetNodeById(ChatLogNodeId);
-                if (textInput is null)
-                    return false;
-
-                var node = textInput->GetAsAtkComponentNode()->Component->UldManager.SearchNodeById(ChatEntryNodeId);
-                if (node is null)
-                    return false;
-
-                return node->IsVisible;
-            }
+            return RaptureAtkModule.Instance()->AtkModule.IsTextInputActive();
         }
 
         private void UpdateConditionHoldTimers()
