@@ -95,7 +95,7 @@ namespace HUD_Manager.Structs
         BattleHighGauge = 884971695,
         LeftWCrossHotbar = 1717924701,
         RightWCrossHotbar = 1893596455,
-        OceanFishingVoyageMissions = 1, // TODO Fix this or something
+        OceanFishingVoyageMissions = 3067124848,
         Timers = 2578885979,
         CrystallineConflictAllyInfo = 3780501874,
         CrystallineConflictBattleLog = 4081580003,
@@ -132,9 +132,6 @@ namespace HUD_Manager.Structs
         }
 
         public static readonly ElementKind[] Immutable = {
-            // cannot be moved with the current method the plugin is using
-            ElementKind.OceanFishingVoyageMissions,
-
             // don't actually know if this is immutable, but idk what it is
             ElementKind.Timers,
         };
@@ -229,7 +226,7 @@ namespace HUD_Manager.Structs
                 ElementKind.BattleHighGauge => 82,
                 ElementKind.NewGamePlusGuide => 83,
                 ElementKind.CompressedAether => 84,
-                //ElementKind.OceanFishingVoyageMissions => 85,
+                ElementKind.OceanFishingVoyageMissions => 85,
                 ElementKind.StatusInfoConditionalEnhancements => 86,
                 ElementKind.SoulGauge => 87,
                 ElementKind.DeathGauge => 88,
