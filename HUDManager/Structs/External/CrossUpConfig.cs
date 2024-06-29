@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
-using Dalamud.Logging;
-using HUD_Manager;
 
 namespace HUDManager.Structs.External;
 
 [Serializable]
+[SuppressMessage("ReSharper", "InconsistentNaming", Justification = "To match CrossUp naming")]
 public class CrossUpConfig
 {
     public CrossUpComponent Enabled { get; set; }
@@ -60,9 +60,8 @@ public class CrossUpConfig
         RLpos = rl;
     }
 
-    public void OpenCrossUp(ref Plugin plugin)
+    public static void OpenCrossUp(ref Plugin plugin)
     {
-
         try
         {
             plugin.Interface.GetIpcSubscriber<bool>("CrossUp.Open").InvokeAction();
@@ -71,7 +70,6 @@ public class CrossUpConfig
         {
            plugin.Log.Warning("IPC with CrossUp failed. Is CrossUp installed?");
         }
-
     }
 
     public void ApplyConfig(Plugin plugin)
@@ -120,6 +118,6 @@ public class CrossUpConfig
         Text = 1 << 8,
         SepEx = 1 << 9,
         LRpos = 1 << 10,
-        RLpos = 1 << 11
+        RLpos = 1 << 11,
     }
 }

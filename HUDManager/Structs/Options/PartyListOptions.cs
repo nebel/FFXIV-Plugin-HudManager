@@ -1,4 +1,4 @@
-namespace HUD_Manager.Structs.Options;
+namespace HUDManager.Structs.Options;
 
 public class PartyListOptions
 {
@@ -6,13 +6,13 @@ public class PartyListOptions
 
     public PartyListAlignment Alignment
     {
-        get => (PartyListAlignment)this._options[0];
-        set => this._options[0] = (byte)value;
+        get => (PartyListAlignment)_options[0];
+        set => _options[0] = (byte)value;
     }
 
     public PartyListOptions(byte[] options)
     {
-        this._options = options;
+        _options = options;
     }
 }
 

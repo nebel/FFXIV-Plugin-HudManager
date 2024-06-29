@@ -1,110 +1,101 @@
-﻿using Dalamud.Interface;
-using Dalamud.Interface.Utility;
-using HUD_Manager.Ui.Editor;
-using HUDManager.Ui;
+﻿using Dalamud.Interface.Utility;
 using HUDManager.Ui.Editor;
 using ImGuiNET;
 using System;
 using System.Numerics;
 
-namespace HUD_Manager.Ui
+namespace HUDManager.Ui;
+
+public sealed class Interface : IDisposable
 {
-    public class Interface : IDisposable
+    private Plugin Plugin { get; }
+
+    private LayoutEditor LayoutEditor { get; }
+    private Swaps Swaps { get; }
+    private Help Help { get; }
+    private FirstUseWarning FirstUseWarning { get; }
+#if DEBUG
+    private Debug Debug { get; }
+#endif
+
+    public Guid SelectedLayout { get; set; } = Guid.Empty;
+
+    private bool _settingsVisible;
+
+    private bool SettingsVisible
     {
-        private Plugin Plugin { get; }
+        get => _settingsVisible;
+        set => _settingsVisible = value;
+    }
 
-        private LayoutEditor LayoutEditor { get; }
-        private Swaps Swaps { get; }
-        private Help Help { get; }
-        private FirstUseWarning FirstUseWarning { get; }
+    public Interface(Plugin plugin)
+    {
+        Plugin = plugin;
+
+        LayoutEditor = new LayoutEditor(plugin, this);
+        Swaps = new Swaps(plugin);
+        Help = new Help(plugin);
+        FirstUseWarning = new FirstUseWarning(plugin);
 #if DEBUG
-        private Debug Debug { get; }
+        Debug = new Debug(plugin);
 #endif
 
-        public Guid SelectedLayout { get; set; } = Guid.Empty;
+        Plugin.Interface.UiBuilder.Draw += Draw;
+        Plugin.Interface.UiBuilder.OpenConfigUi += OpenConfig;
+    }
 
-        private bool _settingsVisible;
+    public void Dispose()
+    {
+        Plugin.Interface.UiBuilder.OpenConfigUi -= OpenConfig;
+        Plugin.Interface.UiBuilder.Draw -= Draw;
+    }
 
-        private bool SettingsVisible
-        {
-            get => this._settingsVisible;
-            set => this._settingsVisible = value;
+    internal void OpenConfig()
+    {
+        SettingsVisible = true;
+    }
+
+    private void Draw()
+    {
+        if (!SettingsVisible) {
+            return;
         }
 
-        public Interface(Plugin plugin)
-        {
-            this.Plugin = plugin;
+        var update = false;
 
-            this.LayoutEditor = new LayoutEditor(plugin, this);
-            this.Swaps = new Swaps(plugin);
-            this.Help = new Help(plugin);
-            this.FirstUseWarning = new FirstUseWarning(plugin);
-#if DEBUG
-            this.Debug = new Debug(plugin);
-#endif
+        ImGui.SetNextWindowSize(ImGuiHelpers.ScaledVector2(530, 530), ImGuiCond.FirstUseEver);
+        ImGui.SetNextWindowSizeConstraints(ImGuiHelpers.ScaledVector2(530, 530), new Vector2(int.MaxValue, int.MaxValue));
 
-            this.Plugin.Interface.UiBuilder.Draw += this.Draw;
-            this.Plugin.Interface.UiBuilder.OpenConfigUi += this.OpenConfig;
+        var expanded = ImGui.Begin(Plugin.Name, ref _settingsVisible);
+        if (!expanded || !_settingsVisible) {
+            Plugin.Swapper.SetEditLock(false);
+            return;
         }
 
-        public void Dispose()
-        {
-            this.Plugin.Interface.UiBuilder.OpenConfigUi -= this.OpenConfig;
-            this.Plugin.Interface.UiBuilder.Draw -= this.Draw;
-        }
-
-        internal void OpenConfig()
-        {
-            this.SettingsVisible = true;
-        }
-
-        private void OpenConfig(object sender, EventArgs e)
-        {
-            this.OpenConfig();
-        }
-
-        private void Draw()
-        {
-            if (!this.SettingsVisible) {
-                return;
+        if (ImGui.BeginTabBar("##hudmanager-tabs")) {
+            if (!Plugin.Config.UnderstandsRisks) {
+                FirstUseWarning.Draw(ref update);
+                goto End;
             }
 
-            bool update = false;
+            LayoutEditor.Draw();
 
-            ImGui.SetNextWindowSize(ImGuiHelpers.ScaledVector2(530, 530), ImGuiCond.FirstUseEver);
-            ImGui.SetNextWindowSizeConstraints(ImGuiHelpers.ScaledVector2(530, 530), new Vector2(int.MaxValue, int.MaxValue));
+            Swaps.Draw();
 
-            var expanded = ImGui.Begin(this.Plugin.Name, ref _settingsVisible);
-            if (!expanded || !_settingsVisible) {
-                Plugin.Swapper.SetEditLock(false);
-                return;
-            }
-
-            if (ImGui.BeginTabBar("##hudmanager-tabs")) {
-                if (!Plugin.Config.UnderstandsRisks) {
-                    this.FirstUseWarning.Draw(ref update);
-                    goto End;
-                }
-
-                this.LayoutEditor.Draw();
-
-                this.Swaps.Draw();
-
-                this.Help.Draw(ref update);
+            Help.Draw(ref update);
 
 #if DEBUG
-                this.Debug.Draw();
+            Debug.Draw();
 #endif
 
-                End:
-                ImGui.EndTabBar();
-            }
-
-            if (update) {
-                Plugin.Config.Save();
-            }
-
-            ImGui.End();
+            End:
+            ImGui.EndTabBar();
         }
+
+        if (update) {
+            Plugin.Config.Save();
+        }
+
+        ImGui.End();
     }
 }

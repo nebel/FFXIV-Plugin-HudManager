@@ -2,25 +2,19 @@
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 
-namespace HUD_Manager
+namespace HUDManager;
+
+internal static class GameGuiExt
 {
-    internal static class GameGuiExt
+    public static AtkUnitBase? GetAtkUnitByName(this IGameGui gameGui, string name, int index)
     {
-        public class NoAtkUnitFoundException : Exception
-        {
-            public NoAtkUnitFoundException(string? message) : base(message) { }
+        var addon = gameGui.GetAddonByName(name, index);
+        if (addon == IntPtr.Zero) {
+            return null;
         }
 
-        public static AtkUnitBase? GetAtkUnitByName(this IGameGui gameGui, string name, int index)
-        {
-            var addon = gameGui.GetAddonByName(name, index);
-            if (addon == IntPtr.Zero) {
-                return null;
-            }
-
-            unsafe {
-                return *(AtkUnitBase*)addon;
-            }
+        unsafe {
+            return *(AtkUnitBase*)addon;
         }
     }
 }

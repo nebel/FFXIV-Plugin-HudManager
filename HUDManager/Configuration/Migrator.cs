@@ -1,6 +1,4 @@
-﻿using Dalamud.Logging;
-using HUD_Manager.Structs;
-using HUDManager;
+﻿using HUDManager.Structs;
 using Lumina.Excel.GeneratedSheets;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -11,269 +9,268 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace HUD_Manager.Configuration
-{
-    public static class Migrator
-    {
-        private static Config Migrate(ConfigV1 old)
-        {
-            var config = new Config
-            {
-                FirstRun = old.FirstRun,
-                StagingSlot = old.StagingSlot,
-                SwapsEnabled = old.SwapsEnabled,
-                UnderstandsRisks = old.UnderstandsRisks,
-            };
+namespace HUDManager.Configuration;
 
-            foreach (var entry in old.Layouts2) {
-                Layout layout;
-                unsafe {
-                    fixed (byte* ptr = entry.Value.Hud) {
-                        layout = Marshal.PtrToStructure<Layout>((IntPtr)ptr);
-                    }
+public static class Migrator
+{
+    private static Config Migrate(ConfigV1 old)
+    {
+        var config = new Config
+        {
+            FirstRun = old.FirstRun,
+            StagingSlot = old.StagingSlot,
+            SwapsEnabled = old.SwapsEnabled,
+            UnderstandsRisks = old.UnderstandsRisks,
+        };
+
+        foreach (var entry in old.Layouts2) {
+            Layout layout;
+            unsafe {
+                fixed (byte* ptr = entry.Value.Hud) {
+                    layout = Marshal.PtrToStructure<Layout>((IntPtr)ptr);
+                }
+            }
+
+            var positions = entry.Value.Positions.ToDictionary(
+                pos => pos.Key,
+                pos => new Window(
+                    WindowComponent.X | WindowComponent.Y,
+                    pos.Value
+                )
+            );
+            var saved = new SavedLayout(entry.Value.Name, layout, positions);
+            config.Layouts[entry.Key] = saved;
+        }
+
+        return config;
+    }
+
+    private static void WithEachLayout(JObject old, Action<JObject> action)
+    {
+        foreach (var property in old["Layouts"].Children<JProperty>()) {
+            if (property.Name == "$type") {
+                continue;
+            }
+
+            var layout = (JObject)property.Value;
+
+            action(layout);
+        }
+    }
+
+    private static void WithEachElement(JObject old, Action<JObject> action)
+    {
+        WithEachLayout(old, layout =>
+        {
+            var elements = (JObject)layout["Elements"];
+
+            foreach (var elementProp in elements.Children<JProperty>()) {
+                if (elementProp.Name == "$type") {
+                    continue;
                 }
 
-                var positions = entry.Value.Positions.ToDictionary(
-                    pos => pos.Key,
-                    pos => new Window(
-                        WindowComponent.X | WindowComponent.Y,
-                        pos.Value
+                var element = (JObject)elementProp.Value;
+
+                action(element);
+            }
+        });
+    }
+
+    private static void MigrateV2(JObject old)
+    {
+        WithEachElement(old, element =>
+        {
+            var bytes = element["Unknown4"].ToObject<byte[]>();
+
+            var options = new byte[4];
+            Buffer.BlockCopy(bytes, 0, options, 0, 4);
+
+            var width = BitConverter.ToUInt16(bytes, 4);
+            var height = BitConverter.ToUInt16(bytes, 6);
+            var unknown4 = bytes[8];
+
+            element.Remove("Unknown4");
+            element["Options"] = options;
+            element["Width"] = width;
+            element["Height"] = height;
+            element["Unknown4"] = unknown4;
+        });
+
+        old["Version"] = 3;
+    }
+
+    private static void MigrateV3(JObject old)
+    {
+        WithEachElement(old, element =>
+        {
+            var measuredFrom = element["Unknown4"].ToObject<byte>();
+            element.Remove("Unknown4");
+            element["MeasuredFrom"] = measuredFrom;
+        });
+
+        old["Version"] = 4;
+    }
+
+    private static void MigrateV4(JObject old)
+    {
+        WithEachLayout(old, layout =>
+        {
+            var oldPositions = (JObject)layout["Positions"];
+            var windows = new Dictionary<string, Window>();
+
+            foreach (var elementProp in oldPositions.Children<JProperty>()) {
+                if (elementProp.Name == "$type") {
+                    continue;
+                }
+
+                var position = (JObject)elementProp.Value;
+                windows[elementProp.Name] = new Window(
+                    WindowComponent.X | WindowComponent.Y,
+                    new Vector2<short>(
+                        position["X"].ToObject<short>(),
+                        position["Y"].ToObject<short>()
                     )
                 );
-                var saved = new SavedLayout(entry.Value.Name, layout, positions);
-                config.Layouts[entry.Key] = saved;
             }
 
-            return config;
+            layout["Windows"] = JObject.FromObject(windows);
+
+            layout.Remove("Positions");
+        });
+
+        old.Remove("ImportPositions");
+        old["Version"] = 5;
+    }
+
+    private static void MigrateV5(JObject old, Plugin plugin)
+    {
+        foreach (var cond in (JArray)old["HudConditionMatches"]) {
+            var oldCond = (JObject)cond;
+            // Convert ClassJobs from their language equivalent to a row ID
+            var classJob = oldCond["ClassJob"];
+
+            if (classJob.Type == JTokenType.Null)
+                continue;
+            var sheet = plugin.DataManager.GetExcelSheet<ClassJob>()!;
+
+            oldCond["ClassJob"] = sheet.First(job => job.Abbreviation == (string)oldCond["ClassJob"]).RowId;
+            var match = oldCond.ToObject<HudConditionMatch>();
         }
 
-        private static void WithEachLayout(JObject old, Action<JObject> action)
-        {
-            foreach (var property in old["Layouts"].Children<JProperty>()) {
-                if (property.Name == "$type") {
-                    continue;
-                }
+        old["Version"] = 6;
+    }
 
-                var layout = (JObject)property.Value;
-
-                action(layout);
+    private static void MigrateV6(JObject old, Plugin plugin)
+    {
+        foreach (var cond in (JArray)old["HudConditionMatches"]!) {
+            if (cond["ClassJob"]!.Type is not JTokenType.Null) {
+                var classJob = plugin.DataManager.GetExcelSheet<ClassJob>()!.GetRow((uint)cond["ClassJob"]!)!;
+                ((JObject)cond).Property("ClassJob")!.Remove();
+                cond["ClassJobCategory"] = (int)ClassJobCategoryIdExtensions.CategoryForClassJob(classJob);
             }
         }
 
-        private static void WithEachElement(JObject old, Action<JObject> action)
-        {
-            WithEachLayout(old, layout =>
-            {
-                var elements = (JObject)layout["Elements"];
+        old["Version"] = 7;
+    }
 
-                foreach (var elementProp in elements.Children<JProperty>()) {
-                    if (elementProp.Name == "$type") {
-                        continue;
-                    }
+    private static string PluginConfig(string? pluginName = null)
+    {
+        pluginName ??= Assembly.GetAssembly(typeof(Plugin)).GetName().Name;
+        return Path.Combine(new[] {
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "XIVLauncher",
+            "pluginConfigs",
+            $"{pluginName}.json",
+        });
+    }
 
-                    var element = (JObject)elementProp.Value;
+    public static Config LoadConfig(Plugin plugin)
+    {
+        var managerPath = PluginConfig();
 
-                    action(element);
-                }
-            });
+        string? text = null;
+        if (File.Exists(managerPath)) {
+            text = File.ReadAllText(managerPath);
+            goto CheckVersion;
         }
 
-        private static void MigrateV2(JObject old)
-        {
-            WithEachElement(old, element =>
-            {
-                var bytes = element["Unknown4"].ToObject<byte[]>();
-
-                var options = new byte[4];
-                Buffer.BlockCopy(bytes, 0, options, 0, 4);
-
-                var width = BitConverter.ToUInt16(bytes, 4);
-                var height = BitConverter.ToUInt16(bytes, 6);
-                var unknown4 = bytes[8];
-
-                element.Remove("Unknown4");
-                element["Options"] = options;
-                element["Width"] = width;
-                element["Height"] = height;
-                element["Unknown4"] = unknown4;
-            });
-
-            old["Version"] = 3;
+        // For v2.1.1 we changed the plugin's internal name to HUDManager.
+        var oldManagerPath = PluginConfig("HUD Manager");
+        if (File.Exists(oldManagerPath)) {
+            text = File.ReadAllText(oldManagerPath);
+            goto CheckVersion;
         }
 
-        private static void MigrateV3(JObject old)
-        {
-            WithEachElement(old, element =>
-            {
-                var measuredFrom = element["Unknown4"].ToObject<byte>();
-                element.Remove("Unknown4");
-                element["MeasuredFrom"] = measuredFrom;
-            });
+        var hudSwapPath = PluginConfig("HudSwap");
 
-            old["Version"] = 4;
+        if (File.Exists(hudSwapPath)) {
+            text = File.ReadAllText(hudSwapPath);
         }
-
-        private static void MigrateV4(JObject old)
-        {
-            WithEachLayout(old, layout =>
-            {
-                var oldPositions = (JObject)layout["Positions"];
-                var windows = new Dictionary<string, Window>();
-
-                foreach (var elementProp in oldPositions.Children<JProperty>()) {
-                    if (elementProp.Name == "$type") {
-                        continue;
-                    }
-
-                    var position = (JObject)elementProp.Value;
-                    windows[elementProp.Name] = new Window(
-                        WindowComponent.X | WindowComponent.Y,
-                        new Vector2<short>(
-                            position["X"].ToObject<short>(),
-                            position["Y"].ToObject<short>()
-                        )
-                    );
-                }
-
-                layout["Windows"] = JObject.FromObject(windows);
-
-                layout.Remove("Positions");
-            });
-
-            old.Remove("ImportPositions");
-            old["Version"] = 5;
-        }
-
-        private static void MigrateV5(JObject old, Plugin plugin)
-        {
-            foreach (var cond in (JArray)old["HudConditionMatches"]) {
-                var oldCond = (JObject)cond;
-                // Convert ClassJobs from their language equivalent to a row ID
-                var classJob = oldCond["ClassJob"];
-
-                if (classJob.Type == JTokenType.Null)
-                    continue;
-                var sheet = plugin.DataManager.GetExcelSheet<ClassJob>()!;
-
-                oldCond["ClassJob"] = sheet.First(job => job.Abbreviation == (string)oldCond["ClassJob"]).RowId;
-                var match = oldCond.ToObject<HudConditionMatch>();
-            }
-
-            old["Version"] = 6;
-        }
-
-        private static void MigrateV6(JObject old, Plugin plugin)
-        {
-            foreach (var cond in (JArray)old["HudConditionMatches"]!) {
-                if (cond["ClassJob"]!.Type is not JTokenType.Null) {
-                    var classJob = plugin.DataManager.GetExcelSheet<ClassJob>()!.GetRow((uint)cond["ClassJob"]!)!;
-                    ((JObject)cond).Property("ClassJob")!.Remove();
-                    cond["ClassJobCategory"] = (int)ClassJobCategoryIdExtensions.CategoryForClassJob(classJob);
-                }
-            }
-
-            old["Version"] = 7;
-        }
-
-        private static string PluginConfig(string? pluginName = null)
-        {
-            pluginName ??= Assembly.GetAssembly(typeof(Plugin)).GetName().Name;
-            return Path.Combine(new[] {
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "XIVLauncher",
-                "pluginConfigs",
-                $"{pluginName}.json",
-            });
-        }
-
-        public static Config LoadConfig(Plugin plugin)
-        {
-            var managerPath = PluginConfig();
-
-            string? text = null;
-            if (File.Exists(managerPath)) {
-                text = File.ReadAllText(managerPath);
-                goto CheckVersion;
-            }
-
-            // For v2.1.1 we changed the plugin's internal name to HUDManager.
-            var oldManagerPath = PluginConfig("HUD Manager");
-            if (File.Exists(oldManagerPath)) {
-                text = File.ReadAllText(oldManagerPath);
-                goto CheckVersion;
-            }
-
-            var hudSwapPath = PluginConfig("HudSwap");
-
-            if (File.Exists(hudSwapPath)) {
-                text = File.ReadAllText(hudSwapPath);
-            }
 
         CheckVersion:
-            if (text == null) {
-                goto DefaultConfig;
+        if (text == null) {
+            goto DefaultConfig;
+        }
+
+        var config = JsonConvert.DeserializeObject<JObject>(text);
+
+        int GetVersion()
+        {
+            if (config.TryGetValue("Version", out var token)) {
+                return token.Value<int>();
             }
 
-            var config = JsonConvert.DeserializeObject<JObject>(text);
+            return -1;
+        }
 
-            int GetVersion()
+        var version = GetVersion();
+        if (version < 1) {
+            goto DefaultConfig;
+        }
+
+        // v1 is a special case - this is an old HudSwap config that we can interpret as a memory chunk
+        // it does not need to go through migration steps after doing this, since it will be interpreted
+        // as the layout would be in memory, so the existing code can deal with it normally
+        if (version == 1) {
+            var v1 = config.ToObject<ConfigV1>(new JsonSerializer
             {
-                if (config.TryGetValue("Version", out var token)) {
-                    return token.Value<int>();
-                }
+                TypeNameHandling = TypeNameHandling.None,
+            });
 
-                return -1;
+            return Migrate(v1);
+        }
+
+        // otherwise, run migrations until done
+        while (version < Config.LatestVersion) {
+            switch (version) {
+                case 2:
+                    MigrateV2(config);
+                    break;
+                case 3:
+                    MigrateV3(config);
+                    break;
+                case 4:
+                    MigrateV4(config);
+                    break;
+                case 5:
+                    MigrateV5(config, plugin);
+                    break;
+                case 6:
+                    MigrateV6(config, plugin);
+                    break;
+                default:
+                    plugin.Log.Warning($"Tried to migrate from an unknown version: {version}");
+                    goto DefaultConfig;
             }
 
-            var version = GetVersion();
-            if (version < 1) {
-                goto DefaultConfig;
-            }
+            version = GetVersion();
+        }
 
-            // v1 is a special case - this is an old HudSwap config that we can interpret as a memory chunk
-            // it does not need to go through migration steps after doing this, since it will be interpreted
-            // as the layout would be in memory, so the existing code can deal with it normally
-            if (version == 1) {
-                var v1 = config.ToObject<ConfigV1>(new JsonSerializer
-                {
-                    TypeNameHandling = TypeNameHandling.None,
-                });
-
-                return Migrate(v1);
-            }
-
-            // otherwise, run migrations until done
-            while (version < Config.LatestVersion) {
-                switch (version) {
-                    case 2:
-                        MigrateV2(config);
-                        break;
-                    case 3:
-                        MigrateV3(config);
-                        break;
-                    case 4:
-                        MigrateV4(config);
-                        break;
-                    case 5:
-                        MigrateV5(config, plugin);
-                        break;
-                    case 6:
-                        MigrateV6(config, plugin);
-                        break;
-                    default:
-                        plugin.Log.Warning($"Tried to migrate from an unknown version: {version}");
-                        goto DefaultConfig;
-                }
-
-                version = GetVersion();
-            }
-
-            if (version == Config.LatestVersion) {
-                return config.ToObject<Config>();
-            }
+        if (version == Config.LatestVersion) {
+            return config.ToObject<Config>();
+        }
 
         DefaultConfig:
-            return plugin.Interface.GetPluginConfig() as Config ?? new Config();
-        }
+        return plugin.Interface.GetPluginConfig() as Config ?? new Config();
     }
 }

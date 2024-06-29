@@ -1,8 +1,7 @@
-﻿namespace HUD_Manager.Configuration
+﻿namespace HUDManager.Configuration;
+
+public enum PositioningMode
 {
-    public enum PositioningMode
-    {
-        Percentage,
-        Pixel,
-    }
+    Percentage,
+    Pixel,
 }

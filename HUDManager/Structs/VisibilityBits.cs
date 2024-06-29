@@ -1,11 +1,10 @@
 ﻿using System;
 
-namespace HUD_Manager.Structs
+namespace HUDManager.Structs;
+
+[Flags]
+public enum VisibilityFlags : byte
 {
-    [Flags]
-    public enum VisibilityFlags : byte
-    {
-        Keyboard = 1 << 0,
-        Gamepad = 1 << 1,
-    }
+    Keyboard = 1 << 0,
+    Gamepad = 1 << 1,
 }

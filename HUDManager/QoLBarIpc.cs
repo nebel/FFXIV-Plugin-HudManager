@@ -1,11 +1,10 @@
-﻿using Dalamud.Logging;
-using Dalamud.Plugin.Ipc;
+﻿using Dalamud.Plugin.Ipc;
 using HUDManager.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
-namespace HUD_Manager;
+namespace HUDManager;
 
 public class QoLBarIpc
 {
@@ -13,7 +12,7 @@ public class QoLBarIpc
     public const int IndexRemoved = -2;
 
     private readonly Plugin _plugin;
-    private string[] _conditionList = Array.Empty<string>();
+    private string[] _conditionList = [];
     private Dictionary<int, ConditionState> _cache = new();
 
     private readonly ICallGateSubscriber<object> _qolBarInitializedSubscriber;
@@ -61,7 +60,7 @@ public class QoLBarIpc
         }
         catch (Exception e) {
             _plugin.Log.Warning(e, "Error fetching QoL Bar condition sets");
-            return Array.Empty<string>();
+            return [];
         }
     }
 
@@ -73,14 +72,14 @@ public class QoLBarIpc
             oldState = null;
         }
 
-        var state = this.GetConditionState(index);
+        var state = GetConditionState(index);
         _cache[index] = state;
         return state;
     }
 
     public ConditionState GetConditionState(int index)
     {
-        if (!this.Enabled) {
+        if (!Enabled) {
             return ConditionState.ErrorPluginUnavailable;
         }
 
@@ -124,7 +123,7 @@ public class QoLBarIpc
             _plugin.Config.Save();
         }
 
-        this.ClearCache();
+        ClearCache();
     }
 
     private void OnRemovedConditionSet(int removed)
@@ -143,16 +142,16 @@ public class QoLBarIpc
             _plugin.Config.Save();
         }
 
-        this.ClearCache();
+        ClearCache();
     }
 
     public void ClearCache()
     {
         _cache = new();
-        if (this.Enabled) {
-            this.GetConditionSets();
+        if (Enabled) {
+            GetConditionSets();
         } else {
-            _conditionList = Array.Empty<string>();
+            _conditionList = [];
         }
     }
 
@@ -169,44 +168,44 @@ public class QoLBarIpc
         _qolBarMovedConditionSetProvider = plugin.Interface.GetIpcSubscriber<int, int, object>("QoLBar.MovedConditionSet");
         _qolBarRemovedConditionSetProvider = plugin.Interface.GetIpcSubscriber<int, object>("QoLBar.RemovedConditionSet");
 
-        _qolBarInitializedSubscriber.Subscribe(this.Enable);
-        _qolBarDisposedSubscriber.Subscribe(this.Disable);
-        _qolBarMovedConditionSetProvider.Subscribe(this.OnMovedConditionSet);
-        _qolBarRemovedConditionSetProvider.Subscribe(this.OnRemovedConditionSet);
+        _qolBarInitializedSubscriber.Subscribe(Enable);
+        _qolBarDisposedSubscriber.Subscribe(Disable);
+        _qolBarMovedConditionSetProvider.Subscribe(OnMovedConditionSet);
+        _qolBarRemovedConditionSetProvider.Subscribe(OnRemovedConditionSet);
 
-        this.Enable();
+        Enable();
     }
 
     private void Enable()
     {
-        if (this.IpcVersion != 1) {
+        if (IpcVersion != 1) {
             return;
         }
 
         _plugin.Log.Debug("Enabling QoLBar IPC");
-        this.Enabled = true;
-        this.ClearCache();
+        Enabled = true;
+        ClearCache();
     }
 
     private void Disable()
     {
-        if (!this.Enabled) {
+        if (!Enabled) {
             return;
         }
 
         _plugin.Log.Debug("Disabling QoLBar IPC");
-        this.Enabled = false;
-        this.ClearCache();
+        Enabled = false;
+        ClearCache();
     }
 
     [SuppressMessage("ReSharper", "ConditionalAccessQualifierIsNonNullableAccordingToAPIContract")]
     public void Dispose()
     {
-        this.Enabled = false;
-        _qolBarInitializedSubscriber?.Unsubscribe(this.Enable);
-        _qolBarDisposedSubscriber?.Unsubscribe(this.Disable);
-        _qolBarMovedConditionSetProvider?.Unsubscribe(this.OnMovedConditionSet);
-        _qolBarRemovedConditionSetProvider?.Unsubscribe(this.OnRemovedConditionSet);
+        Enabled = false;
+        _qolBarInitializedSubscriber?.Unsubscribe(Enable);
+        _qolBarDisposedSubscriber?.Unsubscribe(Disable);
+        _qolBarMovedConditionSetProvider?.Unsubscribe(OnMovedConditionSet);
+        _qolBarRemovedConditionSetProvider?.Unsubscribe(OnRemovedConditionSet);
     }
 }
 

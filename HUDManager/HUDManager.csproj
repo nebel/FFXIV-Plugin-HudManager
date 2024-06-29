@@ -2,7 +2,7 @@
     <PropertyGroup>
         <OutputType>Library</OutputType>
         <TargetFramework>net8.0-windows</TargetFramework>
-        <Version>2.5.19.0</Version>
+        <Version>2.5.20.0</Version>
         <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>enable</Nullable>
@@ -15,7 +15,7 @@
     <PropertyGroup>
         <DalamudLibPath>$(AppData)\XIVLauncher\addon\Hooks\dev</DalamudLibPath>
         <DebugType>full</DebugType>
-        <DefineConstants>xDEBUG;xREADONLY;xLOCALCS</DefineConstants>
+        <DefineConstants>DEBUG;xREADONLY;xLOCALCS</DefineConstants>
     </PropertyGroup>
 
 	<ItemGroup>
@@ -65,13 +65,7 @@
     </Choose>
 
     <ItemGroup>
-        <PackageReference Include="Costura.Fody" Version="5.7.0" PrivateAssets="all" />
-        <PackageReference Include="DalamudPackager" Version="2.1.12" />
-        <PackageReference Include="Fody" Version="6.6.4">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="Resourcer.Fody" Version="1.8.0" PrivateAssets="all" />
+        <PackageReference Include="DalamudPackager" Version="2.1.13" />
         <PackageReference Include="YamlDotNet" Version="12.3.1" GeneratePathProperty="true" />
     </ItemGroup>
 

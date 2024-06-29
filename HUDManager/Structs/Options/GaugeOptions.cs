@@ -1,24 +1,23 @@
-﻿namespace HUD_Manager.Structs.Options
+﻿namespace HUDManager.Structs.Options;
+
+public class GaugeOptions
 {
-    public class GaugeOptions
+    private readonly byte[] _options;
+
+    public GaugeStyle Style
     {
-        private readonly byte[] _options;
-
-        public GaugeStyle Style
-        {
-            get => (GaugeStyle)this._options[0];
-            set => this._options[0] = (byte)value;
-        }
-
-        public GaugeOptions(byte[] options)
-        {
-            this._options = options;
-        }
+        get => (GaugeStyle)_options[0];
+        set => _options[0] = (byte)value;
     }
 
-    public enum GaugeStyle : byte
+    public GaugeOptions(byte[] options)
     {
-        Normal = 0,
-        Simple = 1,
+        _options = options;
     }
+}
+
+public enum GaugeStyle : byte
+{
+    Normal = 0,
+    Simple = 1,
 }
