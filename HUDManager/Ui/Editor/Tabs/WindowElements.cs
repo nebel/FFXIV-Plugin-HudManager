@@ -21,12 +21,12 @@ public class WindowElements
             ImGui.Separator();
 
             foreach (var window in WindowKindExt.All) {
-                var addon = Service.GameGui.GetAtkUnitByName(window, 1);
-                if (addon == null) {
+                var addon = Service.GameGui.GetAddonByName(window);
+                if (addon.IsNull) {
                     continue;
                 }
 
-                var flags = addon.Value.IsVisible && !layout.Windows.ContainsKey(window)
+                var flags = addon.IsVisible && !layout.Windows.ContainsKey(window)
                     ? ImGuiSelectableFlags.None
                     : ImGuiSelectableFlags.Disabled;
 

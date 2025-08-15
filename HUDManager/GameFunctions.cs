@@ -1,8 +1,10 @@
-﻿using Dalamud.Utility.Signatures;
+﻿using Dalamud.Plugin.Services;
+using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Common.Configuration;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using System;
 
 namespace HUDManager;
 
@@ -46,11 +48,10 @@ public unsafe class GameFunctions
 
     public Vector2<short>? GetAddonPosition(string uiName)
     {
-        var addon = Service.GameGui.GetAtkUnitByName(uiName, 1);
-        if (addon == null) {
+        var addon = (AtkUnitBase*)Service.GameGui.GetAddonByName(uiName).Address;
+        if (addon is null) {
             return null;
         }
-
-        return new Vector2<short>(addon.Value.X, addon.Value.Y);
+        return new Vector2<short>(addon->X, addon->Y);
     }
 }
