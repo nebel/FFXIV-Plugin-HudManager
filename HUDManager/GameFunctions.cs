@@ -1,43 +1,47 @@
-﻿using FFXIVClientStructs.FFXIV.Component.GUI;
-using System;
-using System.Runtime.InteropServices;
+﻿using Dalamud.Utility.Signatures;
+using FFXIVClientStructs.FFXIV.Client.UI;
+using FFXIVClientStructs.FFXIV.Client.UI.Misc;
+using FFXIVClientStructs.FFXIV.Common.Configuration;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace HUDManager;
 
-public class GameFunctions
+public unsafe class GameFunctions
 {
-    private delegate byte UpdateAddonPositionDelegate(IntPtr raptureAtkUnitManager, IntPtr addon, byte clicked);
-    private readonly UpdateAddonPositionDelegate _updateAddonPosition;
+    [Signature("E8 ?? ?? ?? ?? 48 8B 8B ?? ?? ?? ?? 33 D2 48 8B 01 FF 90 ?? ?? ?? ??")]
+    private readonly delegate* unmanaged<ConfigBase.ChangeEventInterface*, AtkUnitBase*, byte, void>
+        _updateAddonPosition = null!;
+
+    [Signature("E8 ?? ?? ?? ?? 4C 8B 7C 24 ?? 41 C6 46 ?? ??")]
+    private readonly delegate* unmanaged<AddonConfig*, void> _applyHudLayout = null!;
 
     public GameFunctions()
     {
-        var updatePositionPtr = Service.SigScanner.ScanText("E8 ?? ?? ?? ?? 48 8B 8B ?? ?? ?? ?? 33 D2 48 8B 01 FF 90 ?? ?? ?? ??");
-        _updateAddonPosition = Marshal.GetDelegateForFunctionPointer<UpdateAddonPositionDelegate>(updatePositionPtr);
+        Service.GameInteropProvider.InitializeFromAttributes(this);
     }
 
-    public unsafe void SetAddonPosition(string uiName, short x, short y)
+    public void SetAddonPosition(string uiName, short x, short y)
     {
-        var addon = Service.GameGui.GetAddonByName(uiName);
-        if (addon == IntPtr.Zero) {
+        var addon = (AtkUnitBase*)Service.GameGui.GetAddonByName(uiName).Address;
+        if (addon is null) {
             return;
         }
 
-        var addonPtr = (AtkUnitBase*)addon.Address;
+        var uiModule = (UIModule*)Service.GameGui.GetUIModule().Address;
+        var changeEventInterface = uiModule->NextInterface;
+        // Service.Log.Debug($"0x{(nint)changeEventInterface:X} / 0x{Marshal.ReadIntPtr((nint)uiModule + 0x20):X}");
+        if (changeEventInterface is null) {
+            return;
+        }
 
-        var baseUi = Service.GameGui.GetUIModule().Address;
-        var manager = Marshal.ReadIntPtr(baseUi + 0x20);
+        _updateAddonPosition(changeEventInterface, addon, 1);
+        addon->SetPosition(x, y);
+        _updateAddonPosition(changeEventInterface, addon, 0);
+    }
 
-        _updateAddonPosition(
-            manager,
-            addon,
-            1
-        );
-        addonPtr->SetPosition(x, y);
-        _updateAddonPosition(
-            manager,
-            addon,
-            0
-        );
+    public void ApplyHudLayout()
+    {
+        _applyHudLayout(AddonConfig.Instance());
     }
 
     public Vector2<short>? GetAddonPosition(string uiName)
