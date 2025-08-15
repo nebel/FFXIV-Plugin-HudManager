@@ -650,7 +650,7 @@ public class HudElements
 
         if (update) {
             Plugin.Hud.WriteEffectiveLayout(Plugin.Config.StagingSlot, Ui.SelectedLayout);
-            Plugin.Hud.SelectSlot(Plugin.Config.StagingSlot, true);
+            Plugin.Hud.SelectSlot(Plugin.Config.StagingSlot);
         }
 
         ImGui.EndChild();

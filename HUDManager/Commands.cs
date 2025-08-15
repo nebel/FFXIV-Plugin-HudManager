@@ -55,7 +55,7 @@ public sealed class Commands : IDisposable
 
             Plugin.Ui.SelectedLayout = entry.Key;
             Plugin.Hud.WriteEffectiveLayout(Plugin.Config.StagingSlot, entry.Key);
-            Plugin.Hud.SelectSlot(Plugin.Config.StagingSlot, true);
+            Plugin.Hud.SelectSlot(Plugin.Config.StagingSlot);
         } else if (argsList[0] == "condition") {
             var quotedArgs = GetArgsWithQuotes(args);
             if (quotedArgs is null) {

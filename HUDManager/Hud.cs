@@ -33,8 +33,9 @@ public sealed class Hud : IDisposable
         public bool SameJob(uint playerJobId) => JobId == playerJobId;
     }
 
-    public unsafe void SelectSlot(HudSlot slot, bool force = false)
+    public unsafe void SelectSlot(HudSlot slot)
     {
+#if OLD_SELECT_STYLE
         // read the current slot
         var currentSlot = GetActiveHudSlot();
         // if the current slot is the slot we want to change to, we can force a reload by
@@ -55,6 +56,13 @@ public sealed class Hud : IDisposable
         } else {
             AddonConfig.Instance()->ChangeHudLayout((uint)slot);
         }
+#else
+        if (GetActiveHudSlot() == slot) {
+            Plugin.GameFunctions.ApplyHudLayout();
+        } else {
+            AddonConfig.Instance()->ChangeHudLayout((uint)slot);
+        }
+#endif
     }
 
     public static unsafe AddonConfigData* GetAddonConfigData()
@@ -142,7 +150,7 @@ public sealed class Hud : IDisposable
 
         var currentSlot = GetActiveHudSlot();
         if (currentSlot == slot) {
-            SelectSlot(currentSlot, true);
+            SelectSlot(currentSlot);
         }
 #endif
     }
