@@ -1,10 +1,8 @@
-﻿using Dalamud.Plugin.Services;
-using Dalamud.Utility.Signatures;
+﻿using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Common.Configuration;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using System;
 
 namespace HUDManager;
 
