@@ -9,13 +9,10 @@ namespace HUDManager;
 public sealed class Commands : IDisposable
 {
     public const string QuoteCharacter = "\"";
-    private Plugin Plugin { get; }
 
-    public Commands(Plugin plugin)
+    public Commands()
     {
-        Plugin = plugin;
-
-        Plugin.CommandManager.AddHandler("/hudman", new CommandInfo(OnCommand)
+        Service.CommandManager.AddHandler("/hudman", new CommandInfo(OnCommand)
         {
             HelpMessage = "Open the HUD Manager settings or swap to layout name"
                 + "\n\t/hudman → open config window"
@@ -27,7 +24,7 @@ public sealed class Commands : IDisposable
 
     public void Dispose()
     {
-        Plugin.CommandManager.RemoveHandler("/hudman");
+        Service.CommandManager.RemoveHandler("/hudman");
     }
 
     private void OnCommand(string command, string args)
@@ -41,18 +38,18 @@ public sealed class Commands : IDisposable
 
         if (argsList[0] == "swap") {
             if (Plugin.Config.SwapsEnabled) {
-                Plugin.ChatGui.PrintError("You must first disable swaps in order to manually swap layouts.");
+                Service.ChatGui.PrintError("You must first disable swaps in order to manually swap layouts.");
                 return;
             }
 
             if (argsList.Length != 2) {
-                Plugin.ChatGui.PrintError("Invalid arguments.");
+                Service.ChatGui.PrintError("Invalid arguments.");
                 return;
             }
 
             var entry = Plugin.Config.Layouts.FirstOrDefault(e => e.Value.Name == argsList[1]);
             if (entry.Equals(default(KeyValuePair<Guid, SavedLayout>))) {
-                Plugin.ChatGui.PrintError($"Invalid layout \"{argsList[1]}\".");
+                Service.ChatGui.PrintError($"Invalid layout \"{argsList[1]}\".");
                 return;
             }
 
@@ -62,21 +59,21 @@ public sealed class Commands : IDisposable
         } else if (argsList[0] == "condition") {
             var quotedArgs = GetArgsWithQuotes(args);
             if (quotedArgs is null) {
-                Plugin.ChatGui.PrintError("Malformed quotation marks.");
+                Service.ChatGui.PrintError("Malformed quotation marks.");
                 return;
             }
 
             if (quotedArgs.Length != 3) {
-                Plugin.ChatGui.PrintError("Invalid arguments.");
+                Service.ChatGui.PrintError("Invalid arguments.");
                 return;
             }
 
             var cond = Plugin.Config.CustomConditions.Find(c => c.Name == quotedArgs[1]);
             if (cond is null) {
-                Plugin.ChatGui.PrintError($"Invalid condition \"{quotedArgs[1]}\".");
+                Service.ChatGui.PrintError($"Invalid condition \"{quotedArgs[1]}\".");
                 return;
             } else if (cond.ConditionType != CustomConditionType.ConsoleToggle) {
-                Plugin.ChatGui.PrintError("That condition cannot be toggled by commands.");
+                Service.ChatGui.PrintError("That condition cannot be toggled by commands.");
                 return;
             }
 
@@ -95,14 +92,14 @@ public sealed class Commands : IDisposable
             }
 
             if (!val.HasValue) {
-                Plugin.ChatGui.PrintError($"Invalid setting \"{quotedArgs[2]}\".");
+                Service.ChatGui.PrintError($"Invalid setting \"{quotedArgs[2]}\".");
                 return;
             }
 
             Plugin.Statuses.CustomConditionStatus[cond] = val.Value;
         } else if (argsList[0] == "swapper") {
             if (argsList.Length != 2) {
-                Plugin.ChatGui.PrintError("Invalid arguments.");
+                Service.ChatGui.PrintError("Invalid arguments.");
                 return;
             }
 
@@ -116,13 +113,13 @@ public sealed class Commands : IDisposable
             }
 
             if (!val.HasValue) {
-                Plugin.ChatGui.PrintError($"Invalid setting \"{argsList[1]}\".");
+                Service.ChatGui.PrintError($"Invalid setting \"{argsList[1]}\".");
                 return;
             }
 
             Plugin.Config.SwapsEnabled = val.Value;
         } else {
-            Plugin.ChatGui.PrintError($"Invalid subcommand \"{argsList[0]}\".");
+            Service.ChatGui.PrintError($"Invalid subcommand \"{argsList[0]}\".");
         }
     }
 

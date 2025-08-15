@@ -14,7 +14,7 @@ public class MultiCondition
     private readonly List<MultiConditionItem> Items = [];
     public int Count => Items.Count;
 
-    public bool IsActive(Plugin plugin)
+    public bool IsActive()
     {
         if (Items.Count == 0)
             return false;
@@ -25,21 +25,21 @@ public class MultiCondition
 
         bool first = true; // it's quicker than Select(i, v) and then checking i == 0
         foreach (var item in Items) {
-            if (item.Condition.CurrentType == typeof(CustomCondition) && !plugin.Config.CustomConditions.Contains(item.Condition.Custom!)) {
+            if (item.Condition.CurrentType == typeof(CustomCondition) && !Plugin.Config.CustomConditions.Contains(item.Condition.Custom!)) {
                 toRemove.Add(item);
                 continue;
             }
 
             if (first) {
-                status = item.Condition.IsActive(plugin) ^ item.Negation;
+                status = item.Condition.IsActive() ^ item.Negation;
                 first = false;
                 continue;
             }
 
             if (item.Type is MultiConditionJunction.LogicalAnd)
-                status &= item.Condition.IsActive(plugin) ^ item.Negation;
+                status &= item.Condition.IsActive() ^ item.Negation;
             else if (item.Type is MultiConditionJunction.LogicalOr)
-                status |= item.Condition.IsActive(plugin) ^ item.Negation;
+                status |= item.Condition.IsActive() ^ item.Negation;
         }
 
         foreach (var item in toRemove)

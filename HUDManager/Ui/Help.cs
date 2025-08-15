@@ -4,13 +4,6 @@ namespace HUDManager.Ui;
 
 public class Help
 {
-    private Plugin Plugin { get; }
-
-    public Help(Plugin plugin)
-    {
-        Plugin = plugin;
-    }
-
     internal void Draw(ref bool update)
     {
         if (!ImGui.BeginTabItem("Help")) {

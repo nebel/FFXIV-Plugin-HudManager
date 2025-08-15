@@ -7,22 +7,18 @@ namespace HUDManager;
 
 public sealed class Swapper : IDisposable
 {
-    private Plugin Plugin { get; }
-
     private bool _editLock;
 
-    public Swapper(Plugin plugin)
+    public Swapper()
     {
-        Plugin = plugin;
-
-        Plugin.Framework.Update += OnFrameworkUpdate;
-        Plugin.ClientState.TerritoryChanged += OnTerritoryChange;
+        Service.Framework.Update += OnFrameworkUpdate;
+        Service.ClientState.TerritoryChanged += OnTerritoryChange;
     }
 
     public void Dispose()
     {
-        Plugin.Framework.Update -= OnFrameworkUpdate;
-        Plugin.ClientState.TerritoryChanged -= OnTerritoryChange;
+        Service.Framework.Update -= OnFrameworkUpdate;
+        Service.ClientState.TerritoryChanged -= OnTerritoryChange;
     }
 
     private void OnTerritoryChange(ushort tid)
@@ -52,7 +48,7 @@ public sealed class Swapper : IDisposable
             return;
         }
 
-        var player = Plugin.ClientState.LocalPlayer;
+        var player = Service.ClientState.LocalPlayer;
         if (player == null) {
             return;
         }
@@ -63,11 +59,11 @@ public sealed class Swapper : IDisposable
         }
 
         // Skipping due to HUD swaps in cutscenes causing main menu to become visible
-        if (Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent]
-            || Plugin.Condition[ConditionFlag.WatchingCutscene78] // Used in Dalamud's cutscene check
-            || Plugin.Condition[ConditionFlag.BoundByDuty95] // GATE: Air Force One
-            || Plugin.Condition[ConditionFlag.PlayingLordOfVerminion]
-            || Plugin.Condition[ConditionFlag.BetweenAreas51]) { // Loading Lord of Verminion
+        if (Service.Condition[ConditionFlag.OccupiedInCutSceneEvent]
+            || Service.Condition[ConditionFlag.WatchingCutscene78] // Used in Dalamud's cutscene check
+            || Service.Condition[ConditionFlag.BoundByDuty95] // GATE: Air Force One
+            || Service.Condition[ConditionFlag.PlayingLordOfVerminion]
+            || Service.Condition[ConditionFlag.BetweenAreas51]) { // Loading Lord of Verminion
             return;
         }
 

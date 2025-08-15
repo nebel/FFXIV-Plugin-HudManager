@@ -142,7 +142,7 @@ public static class Migrator
         old["Version"] = 5;
     }
 
-    private static void MigrateV5(JObject old, Plugin plugin)
+    private static void MigrateV5(JObject old)
     {
         foreach (var cond in (JArray)old["HudConditionMatches"]) {
             var oldCond = (JObject)cond;
@@ -151,7 +151,7 @@ public static class Migrator
 
             if (classJob.Type == JTokenType.Null)
                 continue;
-            var sheet = plugin.DataManager.GetExcelSheet<ClassJob>();
+            var sheet = Service.DataManager.GetExcelSheet<ClassJob>();
 
             oldCond["ClassJob"] = sheet.First(job => job.Abbreviation == (string)oldCond["ClassJob"]).RowId;
             var match = oldCond.ToObject<HudConditionMatch>();
@@ -160,11 +160,11 @@ public static class Migrator
         old["Version"] = 6;
     }
 
-    private static void MigrateV6(JObject old, Plugin plugin)
+    private static void MigrateV6(JObject old)
     {
         foreach (var cond in (JArray)old["HudConditionMatches"]!) {
             if (cond["ClassJob"]!.Type is not JTokenType.Null) {
-                var classJob = plugin.DataManager.GetExcelSheet<ClassJob>().GetRow((uint)cond["ClassJob"]!)!;
+                var classJob = Service.DataManager.GetExcelSheet<ClassJob>().GetRow((uint)cond["ClassJob"]!)!;
                 ((JObject)cond).Property("ClassJob")!.Remove();
                 cond["ClassJobCategory"] = (int)ClassJobCategoryIdExtensions.CategoryForClassJob(classJob);
             }
@@ -184,7 +184,7 @@ public static class Migrator
         });
     }
 
-    public static Config LoadConfig(Plugin plugin)
+    public static Config LoadConfig()
     {
         var managerPath = PluginConfig();
 
@@ -253,13 +253,13 @@ public static class Migrator
                     MigrateV4(config);
                     break;
                 case 5:
-                    MigrateV5(config, plugin);
+                    MigrateV5(config);
                     break;
                 case 6:
-                    MigrateV6(config, plugin);
+                    MigrateV6(config);
                     break;
                 default:
-                    plugin.Log.Warning($"Tried to migrate from an unknown version: {version}");
+                    Service.Log.Warning($"Tried to migrate from an unknown version: {version}");
                     goto DefaultConfig;
             }
 
@@ -271,6 +271,6 @@ public static class Migrator
         }
 
         DefaultConfig:
-        return plugin.Interface.GetPluginConfig() as Config ?? new Config();
+        return Service.Interface.GetPluginConfig() as Config ?? new Config();
     }
 }

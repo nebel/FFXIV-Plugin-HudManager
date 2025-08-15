@@ -9,18 +9,15 @@ namespace HUDManager.Ui;
 
 public class Swaps
 {
-    private Plugin Plugin { get; }
-
     private int _editingConditionIndex = -1;
     private HudConditionMatch? _editingCondition;
     private bool _scrollToAdd;
 
     private (CustomConditions window, bool isOpen) _customConditionsMenu;
 
-    public Swaps(Plugin plugin)
+    public Swaps()
     {
-        Plugin = plugin;
-        _customConditionsMenu = (new CustomConditions(plugin), false);
+        _customConditionsMenu = (new CustomConditions(), false);
     }
 
     internal void Draw()
@@ -124,7 +121,7 @@ public class Swaps
                 // Editing in progress
                 _editingCondition ??= new HudConditionMatch();
 
-                var jobDisplayName = _editingCondition.ClassJobCategory?.DisplayName(Plugin) ?? "Any";
+                var jobDisplayName = _editingCondition.ClassJobCategory?.DisplayName() ?? "Any";
 
                 // Column: Layer
 
@@ -150,7 +147,7 @@ public class Swaps
                         ImGui.Selectable("⸻⸻", false, ImGuiSelectableFlags.Disabled);
                         foreach (var classJobCat in group)
                         {
-                            if (ImGui.Selectable($"{classJobCat.DisplayName(Plugin)}##condition-edit-job")) {
+                            if (ImGui.Selectable($"{classJobCat.DisplayName()}##condition-edit-job")) {
                                 _editingCondition.ClassJobCategory = classJobCat;
                             }
                         }
@@ -239,7 +236,7 @@ public class Swaps
 
                 // Column: Job
 
-                var jobDisplayName = item.cond.ClassJobCategory?.DisplayName(Plugin) ?? String.Empty;
+                var jobDisplayName = item.cond.ClassJobCategory?.DisplayName() ?? String.Empty;
 
                 ImGui.TextUnformatted(jobDisplayName);
                 ImGui.TableNextColumn();
@@ -362,7 +359,7 @@ public class Swaps
             return;
         }
 
-        var player = Plugin.ClientState.LocalPlayer;
+        var player = Service.ClientState.LocalPlayer;
         if (player == null || !Plugin.Config.SwapsEnabled) {
             return;
         }

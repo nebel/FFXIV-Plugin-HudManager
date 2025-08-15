@@ -33,14 +33,14 @@ public class BrowsingwayOverlay
         Clickthrough = clickthrough;
     }
 
-    public void ApplyOverlay(Plugin plugin)
+    public void ApplyOverlay()
     {
         if (CommandName == string.Empty || CommandName.Any(char.IsWhiteSpace))
             return;
 
         void RunCommand(string parameter, bool option)
         {
-            plugin.CommandManager.ProcessCommand($"/bw inlay {CommandName} {parameter} {(option ? "on" : "off")}");
+            Service.CommandManager.ProcessCommand($"/bw inlay {CommandName} {parameter} {(option ? "on" : "off")}");
         }
 
         if (this[BrowsingwayOverlayComponent.Hidden]) {

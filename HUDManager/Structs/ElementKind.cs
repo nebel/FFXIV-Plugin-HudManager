@@ -124,11 +124,11 @@ public static class ElementKindExt
 {
     private static FrozenDictionary<ElementKind, ClassJob> _gaugeJobs = null!;
 
-    public static void Initialize(IDataManager data)
+    public static void Initialize()
     {
         Dictionary<ElementKind, ClassJob> gaugeJobs = new();
 
-        var sheet = data.GetExcelSheet<ClassJob>()!;
+        var sheet = Service.DataManager.GetExcelSheet<ClassJob>()!;
         foreach (var e in All()) {
             if (e.ClassJob(sheet) is { } classJob) {
                 gaugeJobs[e] = classJob;
@@ -266,14 +266,14 @@ public static class ElementKindExt
         return kind.ElementKindRowId() >= 0;
     }
 
-    public static string LocalisedName(this ElementKind kind, IDataManager data)
+    public static string LocalisedName(this ElementKind kind)
     {
         var id = kind.ElementKindRowId();
         if (id < 0) {
             return kind.ToString();
         }
 
-        var name = data.GetExcelSheet<Lumina.Excel.Sheets.Hud>().GetRowOrDefault((uint)id)?.Unknown0.ExtractText() ?? kind.ToString();
+        var name = Service.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Hud>().GetRowOrDefault((uint)id)?.Unknown0.ExtractText() ?? kind.ToString();
 
         if (kind.ClassJob() is {} classJob) {
             name += $" ({classJob.Abbreviation})";

@@ -10,13 +10,6 @@ namespace HUDManager.Ui.Editor.Tabs;
 
 public class WindowElements
 {
-    private Plugin Plugin { get; }
-
-    public WindowElements(Plugin plugin)
-    {
-        Plugin = plugin;
-    }
-
     internal void Draw(SavedLayout layout, ref bool update)
     {
         if (ImGuiExt.IconButton(FontAwesomeIcon.Plus, "uimanager-add-window")) {
@@ -28,7 +21,7 @@ public class WindowElements
             ImGui.Separator();
 
             foreach (var window in WindowKindExt.All) {
-                var addon = Plugin.GameGui.GetAtkUnitByName(window, 1);
+                var addon = Service.GameGui.GetAtkUnitByName(window, 1);
                 if (addon == null) {
                     continue;
                 }

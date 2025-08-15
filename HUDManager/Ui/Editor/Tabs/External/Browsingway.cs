@@ -10,14 +10,7 @@ namespace HUDManager.Ui.Editor.Tabs.External;
 
 public sealed class Browsingway : IExternalElement
 {
-    private readonly Plugin _plugin;
-
-    public Browsingway(Plugin plugin)
-    {
-        _plugin = plugin;
-    }
-
-    public bool Available() => _plugin.Interface.InstalledPlugins.Any(state => state is { Name: "Browsingway" });
+    public bool Available() => Service.Interface.InstalledPlugins.Any(state => state is { Name: "Browsingway" });
 
     public void AddButtonToList(SavedLayout layout, ref bool update, bool avail)
     {

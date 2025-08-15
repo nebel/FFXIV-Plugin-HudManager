@@ -16,13 +16,9 @@ public class Keybinder
 
     private Dictionary<VirtualKey, bool> InputKeyState { get; } = new();
 
-    private readonly Plugin _plugin;
-
-    public Keybinder(Plugin plugin)
+    public Keybinder()
     {
-        _plugin = plugin;
-
-        InputKeys = _plugin.KeyState.GetValidVirtualKeys().ToList()
+        InputKeys = Service.KeyState.GetValidVirtualKeys().ToList()
             .Except(ModifierKeys)
             .Prepend(VirtualKey.NO_KEY)
             .ToImmutableArray()
@@ -35,15 +31,15 @@ public class Keybinder
         bool TrySaveKeyState(VirtualKey? key)
         {
             if (key is not null && key.Value != VirtualKey.NO_KEY) {
-                var unchanged = InputKeyState.GetValueOrDefault(key.Value) == _plugin.KeyState[key.Value];
-                InputKeyState[key.Value] = _plugin.KeyState[key.Value];
+                var unchanged = InputKeyState.GetValueOrDefault(key.Value) == Service.KeyState[key.Value];
+                InputKeyState[key.Value] = Service.KeyState[key.Value];
                 return !unchanged;
             }
             return false;
         }
 
         var changed = false;
-        foreach (var cond in _plugin.Config.CustomConditions) {
+        foreach (var cond in Plugin.Config.CustomConditions) {
             if (cond.ConditionType != CustomConditionType.HoldToActivate)
                 continue;
 
@@ -57,7 +53,7 @@ public class Keybinder
     public bool KeybindIsPressed(VirtualKey key, VirtualKey modifier)
     {
         bool GetKeyState(VirtualKey k)
-            => k == VirtualKey.NO_KEY || _plugin.KeyState[k];
+            => k == VirtualKey.NO_KEY || Service.KeyState[k];
 
         // If both keys are NO_KEY then it should be unpressable.
         if (key == VirtualKey.NO_KEY && modifier == VirtualKey.NO_KEY)

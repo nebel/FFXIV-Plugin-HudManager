@@ -24,17 +24,10 @@ public sealed class Hud : IDisposable
 
     private StagingState? _stagingState;
 
-    private Plugin Plugin { get; }
-
     private record StagingState(uint JobId, Guid LayoutId, List<Guid> LayerIds)
     {
         public bool SameLayers(Guid layoutId, List<Guid> layerIds) => LayoutId == layoutId && LayerIds.SequenceEqual(layerIds);
         public bool SameJob(uint playerJobId) => JobId == playerJobId;
-    }
-
-    public Hud(Plugin plugin)
-    {
-        Plugin = plugin;
     }
 
     public unsafe void SelectSlot(HudSlot slot, bool force = false)
@@ -209,7 +202,7 @@ public sealed class Hud : IDisposable
 
                 var findOverlay = bwOverlays.Find(o => o.CommandName == overlay.CommandName);
                 if (findOverlay is null) {
-                    Plugin.Log.Error("Unable to find overlay during ancestor search");
+                    Service.Log.Error("Unable to find overlay during ancestor search");
                     continue;
                 }
                 findOverlay.UpdateEnabled(overlay);
@@ -231,7 +224,7 @@ public sealed class Hud : IDisposable
             foreach (var layerId in layers.Reverse<Guid>()) {
                 var layer = nodes.Find(layerId);
                 if (layer == null) {
-                    Plugin.Log.Error("unable to find layered condition by ID");
+                    Service.Log.Error("unable to find layered condition by ID");
                     break;
                 }
 
@@ -248,10 +241,10 @@ public sealed class Hud : IDisposable
     public void WriteEffectiveLayoutIfChanged(HudSlot slot, Guid id, List<Guid> layers)
     {
         if (_stagingState != null && _stagingState.SameLayers(id, layers)) {
-            if (_stagingState.SameJob(Util.GetPlayerJobId(Plugin))) {
-                Plugin.Log.Debug($"Skipped layout {GetDebugName(id, layers)} (state unchanged)");
+            if (_stagingState.SameJob(Util.GetPlayerJobId())) {
+                Service.Log.Debug($"Skipped layout {GetDebugName(id, layers)} (state unchanged)");
             } else {
-                Plugin.Log.Debug($"Skipped layout {GetDebugName(id, layers)} (gauge changes only)");
+                Service.Log.Debug($"Skipped layout {GetDebugName(id, layers)} (gauge changes only)");
                 WriteEffectiveLayoutGaugesOnly(id, layers);
             }
             return;
@@ -269,7 +262,7 @@ public sealed class Hud : IDisposable
 
         ApplyAllJobGaugeVisibility(effective);
 
-        _stagingState = new StagingState(Util.GetPlayerJobId(Plugin), id, layers ?? []);
+        _stagingState = new StagingState(Util.GetPlayerJobId(), id, layers ?? []);
     }
 
     public void WriteEffectiveLayout(HudSlot slot, Guid id, List<Guid>? layers = null)
@@ -279,7 +272,7 @@ public sealed class Hud : IDisposable
             return;
         }
 
-        Plugin.Log.Debug($"Writing layout {GetDebugName(id, layers)}");
+        Service.Log.Debug($"Writing layout {GetDebugName(id, layers)}");
 
         WriteLayout(slot, effective.Elements);
 
@@ -290,12 +283,12 @@ public sealed class Hud : IDisposable
         }
 
         foreach (var overlay in effective.BrowsingwayOverlays) {
-            overlay.ApplyOverlay(Plugin);
+            overlay.ApplyOverlay();
         }
 
-        effective.CrossUpConfig?.ApplyConfig(Plugin);
+        effective.CrossUpConfig?.ApplyConfig();
 
-        _stagingState = new StagingState(Util.GetPlayerJobId(Plugin), id, layers ?? []);
+        _stagingState = new StagingState(Util.GetPlayerJobId(), id, layers ?? []);
     }
 
     internal void ImportSlot(string name, HudSlot slot, bool save = true)
@@ -316,10 +309,10 @@ public sealed class Hud : IDisposable
 
     private void ApplyAllJobGaugeVisibility(SavedLayout effectiveLayout)
     {
-        if (Plugin.ClientState.LocalPlayer is null)
+        if (Service.ClientState.LocalPlayer is null)
             return;
 
-        var jobIndex = Plugin.ClientState.LocalPlayer!.ClassJob.ValueNullable?.JobIndex ?? 0;
+        var jobIndex = Service.ClientState.LocalPlayer!.ClassJob.ValueNullable?.JobIndex ?? 0;
         foreach (var (kind, element) in effectiveLayout.Elements) {
             if (kind.ClassJob() is { } classJob && classJob.JobIndex == jobIndex && element[ElementComponent.Visibility]) {
                 ApplyJobGaugeVisibility(kind, element);
@@ -330,11 +323,11 @@ public sealed class Hud : IDisposable
     private unsafe void ApplyJobGaugeVisibility(ElementKind kind, Element element)
     {
         var unitName = kind.GetJobGaugeAtkName()!;
-        var unit = (AtkUnitBase*)Plugin.GameGui.GetAddonByName(unitName).Address;
+        var unit = (AtkUnitBase*)Service.GameGui.GetAddonByName(unitName).Address;
         if (unit is null)
             return;
 
-        var visibilityMask = Util.GamepadModeActive(Plugin) ? VisibilityFlags.Gamepad : VisibilityFlags.Keyboard;
+        var visibilityMask = Util.GamepadModeActive() ? VisibilityFlags.Gamepad : VisibilityFlags.Keyboard;
         if ((element.Visibility & visibilityMask) > 0) {
             // Reveal element.
             if (unit->UldManager.NodeListCount == 0)

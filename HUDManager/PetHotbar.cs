@@ -36,8 +36,6 @@ public sealed class PetHotbar : IDisposable
 
     private delegate void SetupPetHotbarDelegate(IntPtr uiModule, uint value);
 
-    private readonly Plugin _plugin;
-
     private readonly IntPtr _raptureHotbarModulePtr;
     private readonly IntPtr _hotbarPetTypePtr;
 
@@ -48,39 +46,37 @@ public sealed class PetHotbar : IDisposable
     private FixingPvpPetBar _fixStage = FixingPvpPetBar.Off;
     private uint _fixPetType;
 
-    public PetHotbar(Plugin plugin)
+    public PetHotbar()
     {
-        _plugin = plugin;
-
         unsafe {
             _raptureHotbarModulePtr = (nint)UIModule.Instance()->GetRaptureHotbarModule();
             _hotbarPetTypePtr = _raptureHotbarModulePtr + HotbarPetTypeOffset;
         }
 
-        var resetPetHotbarPtr = plugin.SigScanner.ScanText("48 83 EC 28 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 85 C0 74 1F 48 8B 10 48 8B C8");
-        var setupPetHotbarRealPtr = plugin.SigScanner.ScanText("E8 ?? ?? ?? ?? EB 40 83 FD 01");
+        var resetPetHotbarPtr = Service.SigScanner.ScanText("48 83 EC 28 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 85 C0 74 1F 48 8B 10 48 8B C8");
+        var setupPetHotbarRealPtr = Service.SigScanner.ScanText("E8 ?? ?? ?? ?? EB 40 83 FD 01");
 
         if (setupPetHotbarRealPtr == IntPtr.Zero || resetPetHotbarPtr == IntPtr.Zero) {
-            plugin.Log.Error(
+            Service.Log.Error(
                 "PetHotbar: unable to find one or more signatures. Pet hotbar functionality will be disabled.\n" +
                 $"setup: {setupPetHotbarRealPtr}\nreset: 0x{resetPetHotbarPtr:X}");
             return;
         }
 
         _setupPetHotbar = Marshal.GetDelegateForFunctionPointer<SetupPetHotbarDelegate>(setupPetHotbarRealPtr);
-        _resetPetHotbarHook = plugin.GameInteropProvider.HookFromAddress<ResetPetHotbarDelegate>(resetPetHotbarPtr, ResetPetHotbarDetour);
+        _resetPetHotbarHook = Service.GameInteropProvider.HookFromAddress<ResetPetHotbarDelegate>(resetPetHotbarPtr, ResetPetHotbarDetour);
         _resetPetHotbarHook.Enable();
 
-        _plugin.Framework.Update += CheckFixLoop;
+        Service.Framework.Update += CheckFixLoop;
     }
 
     private void ResetPetHotbarDetour()
     {
-        if (_plugin.ClientState.IsPvP && _fixStage == FixingPvpPetBar.Off) {
+        if (Service.ClientState.IsPvP && _fixStage == FixingPvpPetBar.Off) {
             var hotbarPetType = unchecked((uint)Marshal.ReadInt32(_hotbarPetTypePtr));
             if (hotbarPetType > 0) {
-                if (_plugin.GameConfig.UiConfig.TryGet("ExHotbarChangeHotbar1", out bool isPetOverlayEnabled) && isPetOverlayEnabled) {
-                    _plugin.Log.Debug($"PetHotbarFix F0: Detected potentially broken pet hotbar overlay (0x{hotbarPetType:X}). Fixing...");
+                if (Service.GameConfig.UiConfig.TryGet("ExHotbarChangeHotbar1", out bool isPetOverlayEnabled) && isPetOverlayEnabled) {
+                    Service.Log.Debug($"PetHotbarFix F0: Detected potentially broken pet hotbar overlay (0x{hotbarPetType:X}). Fixing...");
                     _fixStage = FixingPvpPetBar.Setup;
                     _fixPetType = hotbarPetType;
                 }
@@ -94,13 +90,13 @@ public sealed class PetHotbar : IDisposable
     {
         if (_fixStage > FixingPvpPetBar.Off) {
             if (_fixStage == FixingPvpPetBar.Setup) {
-                _plugin.Log.Debug("PetHotbarFix F1: Setting hotbar back to mounted state");
+                Service.Log.Debug("PetHotbarFix F1: Setting hotbar back to mounted state");
                 _setupPetHotbar(_raptureHotbarModulePtr, _fixPetType);
                 _fixStage = FixingPvpPetBar.Reset;
                 return;
             }
 
-            _plugin.Log.Debug("PetHotbarFix F2: Resetting hotbar");
+            Service.Log.Debug("PetHotbarFix F2: Resetting hotbar");
             _resetPetHotbarHook.Original();
             _fixStage++;
             _fixStage = FixingPvpPetBar.Off;
@@ -118,6 +114,6 @@ public sealed class PetHotbar : IDisposable
     {
         _resetPetHotbarHook.Disable();
         _resetPetHotbarHook.Dispose();
-        _plugin.Framework.Update -= CheckFixLoop;
+        Service.Framework.Update -= CheckFixLoop;
     }
 }

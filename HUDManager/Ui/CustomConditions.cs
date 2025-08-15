@@ -24,16 +24,13 @@ public class CustomConditions
             Plugin.Config.CustomConditions[_ui.selectedIndex] :
             null;
 
-    private Plugin Plugin { get; }
-
     private readonly DrawConditionEditMenu_InZone _zoneMenu;
     private readonly DrawConditionEditMenu_MultiCondition _menuMulti;
 
-    public CustomConditions(Plugin plugin)
+    public CustomConditions()
     {
-        Plugin = plugin;
-        _zoneMenu = new DrawConditionEditMenu_InZone(Plugin.DataManager);
-        _menuMulti = new DrawConditionEditMenu_MultiCondition(Plugin);
+        _zoneMenu = new DrawConditionEditMenu_InZone(Service.DataManager);
+        _menuMulti = new DrawConditionEditMenu_MultiCondition();
     }
 
     private string DefaultConditionName()
@@ -43,7 +40,7 @@ public class CustomConditions
         string DefaultConditionPattern() => $"Condition{i}";
 
         while (Plugin.Config.CustomConditions.Exists(c => c.Name == DefaultConditionPattern())) {
-            Plugin.Log.Information($"{i}");
+            Service.Log.Information($"{i}");
             i++;
         }
 
@@ -122,7 +119,9 @@ public class CustomConditions
         ImGui.EndListBox();
 
         if (ImGuiExt.IconButton(FontAwesomeIcon.Plus)) {
-            Plugin.Config.CustomConditions.Add(new CustomCondition("<TEMP>", Plugin));
+            var cond = new CustomCondition("<TEMP>");
+            Plugin.Config.CustomConditions.Add(cond);
+            Plugin.Statuses.CustomConditionStatus[cond] = false;
 
             // Enable edit box
             _ui.editIndex = Plugin.Config.CustomConditions.Count - 1;
@@ -214,7 +213,7 @@ public class CustomConditions
 
         ImGui.Spacing();
 
-        var valueChildBgColor = ActiveCondition.IsMet(Plugin) ? ImGuiColors.HealerGreen : ImGuiColors.DPSRed;
+        var valueChildBgColor = ActiveCondition.IsMet() ? ImGuiColors.HealerGreen : ImGuiColors.DPSRed;
         ImGui.PushStyleColor(ImGuiCol.ChildBg, valueChildBgColor - new Vector4(0, 0, 0, 0.82f));
         if (ImGui.BeginChild("##condition-edit-display-value-child",
                 new Vector2(-1, ImGui.GetTextLineHeightWithSpacing() + ImGui.GetStyle().ItemInnerSpacing.Y * 2 + 4), true,
@@ -222,7 +221,7 @@ public class CustomConditions
             ImGui.Text("Current value:");
             ImGui.SameLine();
 
-            var state = ActiveCondition.IpcState(Plugin);
+            var state = ActiveCondition.IpcState();
             if (state is >= ConditionState.ErrorPluginUnavailable) {
                 var text = state switch
                 {
@@ -234,7 +233,7 @@ public class CustomConditions
                 };
                 ImGui.TextColored(ImGuiColors.ParsedPurple, text);
             } else {
-                if (ActiveCondition.IsMet(Plugin)) {
+                if (ActiveCondition.IsMet()) {
                     ImGui.TextColored(ImGuiColors.ParsedGreen, "✓ TRUE");
                 } else {
                     ImGui.TextColored(ImGuiColors.DalamudRed, "× FALSE");
@@ -513,8 +512,6 @@ public class CustomConditions
 
     private class DrawConditionEditMenu_MultiCondition
     {
-        private readonly Plugin _plugin;
-
         private (
             int editingConditionIndex,
             MultiCondition.MultiConditionItem? editingCondition,
@@ -524,9 +521,8 @@ public class CustomConditions
             float savedRowHeight
             ) _ui;
 
-        public DrawConditionEditMenu_MultiCondition(Plugin plugin)
+        public DrawConditionEditMenu_MultiCondition()
         {
-            _plugin = plugin;
             ClearEditing();
         }
 
@@ -604,7 +600,7 @@ public class CustomConditions
                     else
                         ImGui.PushItemWidth(ImGui.GetColumnWidth());
 
-                    if (ImGui.BeginCombo($"##multicond-edit-condition-{i}", _ui.editingCondition.Condition.UiName(_plugin, partial: _ui.editingConditionIndex >= 0))) {
+                    if (ImGui.BeginCombo($"##multicond-edit-condition-{i}", _ui.editingCondition.Condition.UiName(partial: _ui.editingConditionIndex >= 0))) {
                         foreach (Status status in Enum.GetValues(typeof(Status))) {
                             if (ImGui.Selectable($"{status.Name()}##condition-edit-status")) {
                                 _ui.editingCondition.Condition = new CustomConditionUnion(status);
@@ -612,7 +608,7 @@ public class CustomConditions
                             }
                         }
 
-                        foreach (var custom in _plugin.Config.CustomConditions) {
+                        foreach (var custom in Plugin.Config.CustomConditions) {
                             if (ImGui.Selectable($"{custom.DisplayName}##condition-edit-status")) {
                                 var prevCondition = _ui.editingCondition.Condition;
 
@@ -641,7 +637,7 @@ public class CustomConditions
 
                         // Secondary combo for ClassJob
 
-                        if (ImGui.BeginCombo($"##multicond-edit-condition-classjob-{i}", _ui.editingCondition.Condition.ClassJob!.Value.DisplayName(_plugin))) {
+                        if (ImGui.BeginCombo($"##multicond-edit-condition-classjob-{i}", _ui.editingCondition.Condition.ClassJob!.Value.DisplayName())) {
                             var first = true;
                             foreach (var group in ClassJobCategoryIdExtensions.ClassJobCategoryGroupings) {
                                 if (first)
@@ -650,7 +646,7 @@ public class CustomConditions
                                     ImGui.Selectable("--", false, ImGuiSelectableFlags.Disabled);
 
                                 foreach (var classJob in group) {
-                                    if (ImGui.Selectable($"{classJob.DisplayName(_plugin)}##condition-edit-status-classjob-{classJob}")) {
+                                    if (ImGui.Selectable($"{classJob.DisplayName()}##condition-edit-status-classjob-{classJob}")) {
                                         _ui.editingCondition.Condition = new CustomConditionUnion(classJob);
                                         update = true;
                                     }
@@ -704,10 +700,10 @@ public class CustomConditions
 
                     // Column: Condition
 
-                    var thisConditionActive = cond.Condition.IsActive(_plugin) ^ cond.Negation;
+                    var thisConditionActive = cond.Condition.IsActive() ^ cond.Negation;
                     ImGui.Text(thisConditionActive ? "●" : "○");
                     ImGui.SameLine();
-                    ImGui.TextUnformatted(cond.Condition.UiName(_plugin));
+                    ImGui.TextUnformatted(cond.Condition.UiName());
                     ImGui.TableNextColumn();
 
                     // Column: Actions

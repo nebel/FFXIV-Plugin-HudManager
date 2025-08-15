@@ -23,51 +23,45 @@ public class CustomCondition
     public float HoldTime { get; set; }
 
     [JsonConstructor]
-    private CustomCondition(string name)
+    public CustomCondition(string name)
     {
         Name = name;
     }
 
-    public CustomCondition(string name, Plugin plugin) : this(name)
-    {
-        // Auto-add self to the dictionary
-        plugin.Statuses.CustomConditionStatus[this] = default;
-    }
-
-    public bool IsMet(Plugin plugin)
+    public bool IsMet()
     {
         switch (ConditionType) {
             case CustomConditionType.ConsoleToggle:
-                if (plugin.Statuses.CustomConditionStatus.TryGetValue(this, out bool val))
+                if (Plugin.Statuses.CustomConditionStatus.TryGetValue(this, out bool val))
                     return val;
                 throw new InvalidOperationException($"no entry for condition {Name} in CustomConditionStatus");
 
             case CustomConditionType.HoldToActivate:
-                return plugin.Keybinder.KeybindIsPressed(KeyCode, ModifierKeyCode);
+                return Plugin.Keybinder.KeybindIsPressed(KeyCode, ModifierKeyCode);
 
             case CustomConditionType.InZone:
-                var playerMap = Map.GetRootZoneId(plugin.DataManager, plugin.ClientState.TerritoryType);
+                var playerMap = Map.GetRootZoneId(Service.DataManager, Service.ClientState.TerritoryType);
                 return playerMap is not null && MapIds.Contains(playerMap.Value);
 
             case CustomConditionType.QoLBarCondition:
                 if (Negate) {
-                    return plugin.QoLBarIpc.GetConditionState(ExternalIndex) == ConditionState.False;
+                    return Plugin.QoLBarIpc.GetConditionState(ExternalIndex) == ConditionState.False;
                 }
-                return plugin.QoLBarIpc.GetConditionState(ExternalIndex) == ConditionState.True;
+                return Plugin.QoLBarIpc.GetConditionState(ExternalIndex) == ConditionState.True;
 
             case CustomConditionType.MultiCondition:
-                return MultiCondition!.IsActive(plugin);
+                return MultiCondition!.IsActive();
 
             default:
                 throw new InvalidOperationException("invalid condition type");
         }
     }
 
-    public ConditionState? IpcState(Plugin plugin)
+    public ConditionState? IpcState()
     {
         switch (ConditionType) {
             case CustomConditionType.QoLBarCondition:
-                return plugin.QoLBarIpc.GetConditionState(ExternalIndex);
+                return Plugin.QoLBarIpc.GetConditionState(ExternalIndex);
             default:
                 return null;
         }
@@ -124,14 +118,14 @@ public struct CustomConditionUnion
         ClassJob is not null ? typeof(ClassJobCategoryId) :
         throw new CustomConditionUnionUndefinedException();
 
-    public bool IsActive(Plugin plugin)
+    public bool IsActive()
     {
         if (CurrentType == typeof(CustomCondition)) {
-            return Custom!.IsMet(plugin);
+            return Custom!.IsMet();
         } else if (CurrentType == typeof(Status)) {
-            return Game!.Value.Active(plugin);
+            return Game!.Value.Active();
         } else if (CurrentType == typeof(ClassJobCategoryId)) {
-            var player = plugin.ClientState.LocalPlayer;
+            var player = Service.ClientState.LocalPlayer;
             if (player is { ClassJob: { IsValid: true } playerClassJob }) {
                 return ClassJob!.Value.IsActivated(playerClassJob.Value);
             }
@@ -140,10 +134,10 @@ public struct CustomConditionUnion
         throw new CustomConditionUnionUndefinedException();
     }
 
-    public string UiName(Plugin plugin, bool partial = false) =>
+    public string UiName(bool partial = false) =>
         CurrentType == typeof(CustomCondition) ? Custom!.DisplayName :
         CurrentType == typeof(Status) ? Game!.Value.Name() :
-        CurrentType == typeof(ClassJobCategoryId) ? "Class/Job" + (partial ? string.Empty : $"  {ClassJob!.Value.DisplayName(plugin)}") :
+        CurrentType == typeof(ClassJobCategoryId) ? "Class/Job" + (partial ? string.Empty : $"  {ClassJob!.Value.DisplayName()}") :
         throw new CustomConditionUnionUndefinedException();
 
     /// <summary>

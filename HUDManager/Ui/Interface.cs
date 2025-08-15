@@ -8,8 +8,6 @@ namespace HUDManager.Ui;
 
 public sealed class Interface : IDisposable
 {
-    private Plugin Plugin { get; }
-
     private LayoutEditor LayoutEditor { get; }
     private Swaps Swaps { get; }
     private Help Help { get; }
@@ -28,26 +26,24 @@ public sealed class Interface : IDisposable
         set => _settingsVisible = value;
     }
 
-    public Interface(Plugin plugin)
+    public Interface()
     {
-        Plugin = plugin;
-
-        LayoutEditor = new LayoutEditor(plugin, this);
-        Swaps = new Swaps(plugin);
-        Help = new Help(plugin);
-        FirstUseWarning = new FirstUseWarning(plugin);
+        LayoutEditor = new LayoutEditor( this);
+        Swaps = new Swaps();
+        Help = new Help();
+        FirstUseWarning = new FirstUseWarning();
 #if DEBUG
-        Debug = new Debug(plugin);
+        Debug = new Debug();
 #endif
 
-        Plugin.Interface.UiBuilder.Draw += Draw;
-        Plugin.Interface.UiBuilder.OpenConfigUi += OpenConfig;
+        Service.Interface.UiBuilder.Draw += Draw;
+        Service.Interface.UiBuilder.OpenConfigUi += OpenConfig;
     }
 
     public void Dispose()
     {
-        Plugin.Interface.UiBuilder.OpenConfigUi -= OpenConfig;
-        Plugin.Interface.UiBuilder.Draw -= Draw;
+        Service.Interface.UiBuilder.OpenConfigUi -= OpenConfig;
+        Service.Interface.UiBuilder.Draw -= Draw;
     }
 
     internal void OpenConfig()

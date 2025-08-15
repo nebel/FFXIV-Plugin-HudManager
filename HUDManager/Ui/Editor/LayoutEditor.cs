@@ -14,7 +14,6 @@ namespace HUDManager.Ui.Editor;
 
 public class LayoutEditor
 {
-    private Plugin Plugin { get; }
     private Interface Ui { get; }
     internal Previews Previews { get; }
     private HudElements HudElements { get; }
@@ -25,15 +24,14 @@ public class LayoutEditor
     private string? NewLayoutName { get; set; }
     private string? ImportLayoutName { get; set; }
 
-    public LayoutEditor(Plugin plugin, Interface ui)
+    public LayoutEditor(Interface ui)
     {
-        Plugin = plugin;
         Ui = ui;
 
-        Previews = new Previews(plugin, ui);
-        HudElements = new HudElements(plugin, ui, this);
-        Windows = new WindowElements(plugin);
-        ExternalElements = new ExternalElements(plugin, ui);
+        Previews = new Previews(ui);
+        HudElements = new HudElements(ui, this);
+        Windows = new WindowElements();
+        ExternalElements = new ExternalElements(ui);
     }
 
     internal void Draw()
@@ -344,7 +342,7 @@ public class LayoutEditor
 
         void ReportImport(string source)
         {
-            Plugin.ChatGui.Print($"Imported from {source} to layout \"{ImportLayoutName}\".");
+            Service.ChatGui.Print($"Imported from {source} to layout \"{ImportLayoutName}\".");
         }
 
         var exists = Plugin.Config.Layouts.Values.Any(layout => layout.Name == ImportLayoutName);
@@ -393,8 +391,8 @@ public class LayoutEditor
                 saved = JsonConvert.DeserializeObject<SavedLayout>(ImGui.GetClipboardText());
             } catch (Exception e) {
                 saved = null;
-                Plugin.ChatGui.PrintError("Failed to import layout from clipboard.");
-                Plugin.Log.Information(e, "failed to import from clipboard");
+                Service.ChatGui.PrintError("Failed to import layout from clipboard.");
+                Service.Log.Information(e, "failed to import from clipboard");
             }
 
             if (saved != null) {
@@ -418,7 +416,7 @@ public class LayoutEditor
     private void SetUpExportLayoutPopup()
     {
         void ReportExport(string layoutName, string dest)
-            => Plugin.ChatGui.Print($"Exported layout \"{layoutName}\" to {dest}.");
+            => Service.ChatGui.Print($"Exported layout \"{layoutName}\" to {dest}.");
 
         if (!ImGui.BeginPopup(Popups.ExportLayout)) {
             return;

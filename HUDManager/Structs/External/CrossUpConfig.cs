@@ -60,36 +60,36 @@ public class CrossUpConfig
         RLpos = rl;
     }
 
-    public static void OpenCrossUp(ref Plugin plugin)
+    public static void OpenCrossUp()
     {
         try
         {
-            plugin.Interface.GetIpcSubscriber<bool>("CrossUp.Open").InvokeAction();
+            Service.Interface.GetIpcSubscriber<bool>("CrossUp.Open").InvokeAction();
         }
         catch
         {
-           plugin.Log.Warning("IPC with CrossUp failed. Is CrossUp installed?");
+            Service.Log.Warning("IPC with CrossUp failed. Is CrossUp installed?");
         }
     }
 
-    public void ApplyConfig(Plugin plugin)
+    public void ApplyConfig()
     {
         try
         {
-            if (this[CrossUpComponent.Split]) plugin.Interface.GetIpcSubscriber<(bool, int, int), bool>("CrossUp.SplitBar").InvokeAction(Split);
-            if (this[CrossUpComponent.Padlock]) plugin.Interface.GetIpcSubscriber<(int, int, bool), bool>("CrossUp.Padlock").InvokeAction(Padlock);
-            if (this[CrossUpComponent.SetNum]) plugin.Interface.GetIpcSubscriber<(int, int, bool), bool>("CrossUp.SetNumText").InvokeAction(SetNum);
-            if (this[CrossUpComponent.ChangeSet]) plugin.Interface.GetIpcSubscriber<(int, int), bool>("CrossUp.ChangeSet").InvokeAction(ChangeSet);
-            if (this[CrossUpComponent.TriggerText]) plugin.Interface.GetIpcSubscriber<bool, bool>("CrossUp.TriggerText").InvokeAction(!HideTriggerText);
-            if (this[CrossUpComponent.Unassigned]) plugin.Interface.GetIpcSubscriber<bool, bool>("CrossUp.EmptySlots").InvokeAction(!HideUnassigned);
-            if (this[CrossUpComponent.SelectBG]) plugin.Interface.GetIpcSubscriber<(int, int, Vector3), bool>("CrossUp.SelectBG").InvokeAction(SelectBG);
-            if (this[CrossUpComponent.Buttons]) plugin.Interface.GetIpcSubscriber<(Vector3, Vector3), bool>("CrossUp.ButtonGlow").InvokeAction(Buttons);
-            if (this[CrossUpComponent.Text]) plugin.Interface.GetIpcSubscriber<(Vector3, Vector3, Vector3), bool>("CrossUp.TextAndBorders").InvokeAction(Text);
-            if (this[CrossUpComponent.SepEx]) plugin.Interface.GetIpcSubscriber<(bool, bool), bool>("CrossUp.ExBar").InvokeAction((SepEx, OnlyOneEx));
-            if (this[CrossUpComponent.LRpos]) plugin.Interface.GetIpcSubscriber<(int, int), bool>("CrossUp.LRpos").InvokeAction(LRpos);
-            if (this[CrossUpComponent.RLpos]) plugin.Interface.GetIpcSubscriber<(int, int), bool>("CrossUp.RLpos").InvokeAction(RLpos);
+            if (this[CrossUpComponent.Split]) Service.Interface.GetIpcSubscriber<(bool, int, int), bool>("CrossUp.SplitBar").InvokeAction(Split);
+            if (this[CrossUpComponent.Padlock]) Service.Interface.GetIpcSubscriber<(int, int, bool), bool>("CrossUp.Padlock").InvokeAction(Padlock);
+            if (this[CrossUpComponent.SetNum]) Service.Interface.GetIpcSubscriber<(int, int, bool), bool>("CrossUp.SetNumText").InvokeAction(SetNum);
+            if (this[CrossUpComponent.ChangeSet]) Service.Interface.GetIpcSubscriber<(int, int), bool>("CrossUp.ChangeSet").InvokeAction(ChangeSet);
+            if (this[CrossUpComponent.TriggerText]) Service.Interface.GetIpcSubscriber<bool, bool>("CrossUp.TriggerText").InvokeAction(!HideTriggerText);
+            if (this[CrossUpComponent.Unassigned]) Service.Interface.GetIpcSubscriber<bool, bool>("CrossUp.EmptySlots").InvokeAction(!HideUnassigned);
+            if (this[CrossUpComponent.SelectBG]) Service.Interface.GetIpcSubscriber<(int, int, Vector3), bool>("CrossUp.SelectBG").InvokeAction(SelectBG);
+            if (this[CrossUpComponent.Buttons]) Service.Interface.GetIpcSubscriber<(Vector3, Vector3), bool>("CrossUp.ButtonGlow").InvokeAction(Buttons);
+            if (this[CrossUpComponent.Text]) Service.Interface.GetIpcSubscriber<(Vector3, Vector3, Vector3), bool>("CrossUp.TextAndBorders").InvokeAction(Text);
+            if (this[CrossUpComponent.SepEx]) Service.Interface.GetIpcSubscriber<(bool, bool), bool>("CrossUp.ExBar").InvokeAction((SepEx, OnlyOneEx));
+            if (this[CrossUpComponent.LRpos]) Service.Interface.GetIpcSubscriber<(int, int), bool>("CrossUp.LRpos").InvokeAction(LRpos);
+            if (this[CrossUpComponent.RLpos]) Service.Interface.GetIpcSubscriber<(int, int), bool>("CrossUp.RLpos").InvokeAction(RLpos);
         }
-        catch { plugin.Log.Warning("IPC with CrossUp failed. Is CrossUp installed?"); }
+        catch { Service.Log.Warning("IPC with CrossUp failed. Is CrossUp installed?"); }
     }
 
     public bool this[CrossUpComponent component]

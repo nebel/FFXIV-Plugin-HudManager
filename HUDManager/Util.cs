@@ -31,15 +31,15 @@ public static class Util
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool GamepadModeActive(Plugin plugin)
+    public static bool GamepadModeActive()
     {
-        return plugin.GameConfig.UiConfig.TryGet("PadMode", out bool isPadMode) && isPadMode;
+        return Service.GameConfig.UiConfig.TryGet("PadMode", out bool isPadMode) && isPadMode;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool FullScreen(Plugin plugin) // treats Borderless as Full Screen
+    public static bool FullScreen() // treats Borderless as Full Screen
     {
-        return plugin.GameConfig.System.TryGet("ScreenMode", out uint mode) && mode > 0;
+        return Service.GameConfig.System.TryGet("ScreenMode", out uint mode) && mode > 0;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -51,9 +51,9 @@ public static class Util
         }
     }
 
-    public static uint GetPlayerJobId(Plugin plugin)
+    public static uint GetPlayerJobId()
     {
-        return plugin.ClientState.LocalPlayer?.ClassJob.RowId ?? uint.MaxValue;
+        return Service.ClientState.LocalPlayer?.ClassJob.RowId ?? uint.MaxValue;
     }
 
     private static readonly Dictionary<uint, string> JobIdToEnglishAbbreviation = new()

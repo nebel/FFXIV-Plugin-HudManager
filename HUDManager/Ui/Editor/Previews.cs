@@ -8,15 +8,13 @@ namespace HUDManager.Ui.Editor;
 
 public class Previews
 {
-    private Plugin Plugin { get; }
     private Interface Ui { get; }
 
     internal HashSet<ElementKind> Elements { get; } = [];
     internal HashSet<ElementKind> Update { get; } = [];
 
-    public Previews(Plugin plugin, Interface ui)
+    public Previews(Interface ui)
     {
-        Plugin = plugin;
         Ui = ui;
     }
 
@@ -61,7 +59,7 @@ public class Previews
             ImGui.PopStyleVar(3);
             ImGui.PopStyleColor();
 
-            ImGui.TextUnformatted(element.Id.LocalisedName(Plugin.DataManager));
+            ImGui.TextUnformatted(element.Id.LocalisedName());
 
             // determine if the window has moved and update if it has
             var newPos = ImGuiExt.ConvertImGuiToGame(element, ImGui.GetWindowPos());

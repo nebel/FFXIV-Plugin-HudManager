@@ -29,16 +29,14 @@ public class HudElements
         0.6f,
     ];
 
-    private Plugin Plugin { get; }
     private Interface Ui { get; }
     private LayoutEditor Editor { get; }
 
     private string? SearchAdd { get; set; }
     private string? SearchEdit { get; set; }
 
-    public HudElements(Plugin plugin, Interface ui, LayoutEditor editor)
+    public HudElements(Interface ui, LayoutEditor editor)
     {
-        Plugin = plugin;
         Ui = ui;
         Editor = editor;
     }
@@ -67,12 +65,12 @@ public class HudElements
 
             var kinds = ElementKindExt.All()
                 .Where(el => el.IsRealElement())
-                .OrderBy(el => el.LocalisedName(Plugin.DataManager));
+                .OrderBy(el => el.LocalisedName());
             foreach (var kind in kinds) {
                 var elementClassJob = kind.ClassJob();
                 var isForbiddenElement = elementClassJob != null && !Util.HasUnlockedClass(elementClassJob.Value);
                 var elementInConfig = Plugin.Config.Layouts[Ui.SelectedLayout].Elements.ContainsKey(kind);
-                var localisedName = kind.LocalisedName(Plugin.DataManager);
+                var localisedName = kind.LocalisedName();
 
                 if (searchAdd == string.Empty || localisedName.ToLowerInvariant().Contains(searchAdd.ToLowerInvariant())) {
                     if (elementInConfig)
@@ -130,7 +128,7 @@ public class HudElements
 
         var sortedElements = layout.Elements
             .Where(entry => !ElementKindExt.Immutable.Contains(entry.Key) && entry.Key.IsRealElement())
-            .Select(entry => Tuple.Create(entry.Key, entry.Value, entry.Key.LocalisedName(Plugin.DataManager)))
+            .Select(entry => Tuple.Create(entry.Key, entry.Value, entry.Key.LocalisedName()))
             .OrderBy(tuple => tuple.Item3);
         foreach (var (kind, element, name) in sortedElements) {
             if (SearchEdit != null && !name.ContainsIgnoreCase(SearchEdit)) {

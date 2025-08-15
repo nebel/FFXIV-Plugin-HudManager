@@ -14,19 +14,12 @@ namespace HUDManager.Ui.Editor.Tabs.External;
 
 public sealed class CrossUp : IExternalElement
 {
-    private Plugin _plugin;
-
     private static float Scale => ImGuiHelpers.GlobalScale;
-
-    public CrossUp(Plugin plugin)
-    {
-        _plugin = plugin;
-    }
 
     public bool Available()
     {
         try {
-            return _plugin.Interface.InstalledPlugins.Any(state => state is { Name: "CrossUp", IsLoaded: true }) && _plugin.Interface.GetIpcSubscriber<bool>("CrossUp.Available").InvokeFunc();
+            return Service.Interface.InstalledPlugins.Any(state => state is { Name: "CrossUp", IsLoaded: true }) && Service.Interface.GetIpcSubscriber<bool>("CrossUp.Available").InvokeFunc();
         }
         catch {
             return false;
@@ -69,7 +62,7 @@ public sealed class CrossUp : IExternalElement
         ImGui.SetNextItemWidth(40f * Scale);
 
         if (ImGui.TabItemButton($"{Cog.ToIconString()}{AngleDoubleRight.ToIconString()}##xup-open")) {
-            OpenCrossUp(ref _plugin);
+            OpenCrossUp();
         }
         ImGui.PopFont();
         ImGuiExt.HoverTooltip("Open CrossUp");

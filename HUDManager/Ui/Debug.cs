@@ -13,16 +13,9 @@ namespace HUDManager.Ui;
 #if DEBUG
 public class Debug
 {
-    private Plugin Plugin { get; }
-
     private Layout? PreviousLayout { get; set; }
 
     private (bool drawUnknownIds, bool _) _ui = (false, false);
-
-    public Debug(Plugin plugin)
-    {
-        Plugin = plugin;
-    }
 
     internal void Draw()
     {
@@ -34,46 +27,46 @@ public class Debug
 
         if (ImGui.Button("1##ptr1")) {
             var ptr = Hud.GetLayoutPointer(HudSlot.One);
-            Plugin.ChatGui.Print($"{ptr.ToInt64():X}");
+            Service.ChatGui.Print($"{ptr.ToInt64():X}");
         }
 
         ImGui.SameLine();
 
         if (ImGui.Button("2##ptr2")) {
             var ptr = Hud.GetLayoutPointer(HudSlot.Two);
-            Plugin.ChatGui.Print($"{ptr.ToInt64():X}");
+            Service.ChatGui.Print($"{ptr.ToInt64():X}");
         }
 
         ImGui.SameLine();
 
         if (ImGui.Button("3##ptr3")) {
             var ptr = Hud.GetLayoutPointer(HudSlot.Three);
-            Plugin.ChatGui.Print($"{ptr.ToInt64():X}");
+            Service.ChatGui.Print($"{ptr.ToInt64():X}");
         }
 
         ImGui.SameLine();
 
         if (ImGui.Button("4##ptr4")) {
             var ptr = Hud.GetLayoutPointer(HudSlot.Four);
-            Plugin.ChatGui.Print($"{ptr.ToInt64():X}");
+            Service.ChatGui.Print($"{ptr.ToInt64():X}");
         }
 
         ImGui.SameLine();
 
         if (ImGui.Button("Default##ptrDefault")) {
             var ptr = Hud.GetDefaultLayoutPointer();
-            Plugin.ChatGui.Print($"{ptr.ToInt64():X}");
+            Service.ChatGui.Print($"{ptr.ToInt64():X}");
         }
 
         ImGui.TextUnformatted("Log layout to console");
         void LogLayout(HudSlot slot)
         {
             var layout = Hud.ReadLayout(slot);
-            Plugin.Log.Information($"===== Layout START (slot={slot}) =====");
+            Service.Log.Information($"===== Layout START (slot={slot}) =====");
             for (var i = 0; i < layout.elements.Length; i++) {
-                Plugin.Log.Information($"  i={i:000} {layout.elements[i]}");
+                Service.Log.Information($"  i={i:000} {layout.elements[i]}");
             }
-            Plugin.Log.Information("===== Layout END =====");
+            Service.Log.Information("===== Layout END =====");
         }
 
         if (ImGui.Button("1##print1")) {
@@ -94,22 +87,22 @@ public class Debug
         ImGui.SameLine();
         if (ImGui.Button("Default?##printDefault")) {
             var layout = Marshal.PtrToStructure<Layout>(Hud.GetDefaultLayoutPointer());
-            Plugin.Log.Information($"===== Layout START (slot=DEFAULT) =====");
+            Service.Log.Information($"===== Layout START (slot=DEFAULT) =====");
             for (var i = 0; i < layout.elements.Length; i++) {
-                Plugin.Log.Information($"  i={i:000} {layout.elements[i]}");
+                Service.Log.Information($"  i={i:000} {layout.elements[i]}");
             }
-            Plugin.Log.Information("===== Layout END =====");
+            Service.Log.Information("===== Layout END =====");
         }
 
         if (ImGui.Button("Data pointer")) {
             var ptr = Hud.GetDataPointer();
-            Plugin.ChatGui.Print($"{ptr.ToInt64():X}");
+            Service.ChatGui.Print($"{ptr.ToInt64():X}");
         }
 
         if (ImGui.Button("CS Addon Config")) {
             unsafe {
                 var ptr = AddonConfig.Instance();
-                Plugin.ChatGui.Print($"{(nint)ptr:X}");
+                Service.ChatGui.Print($"{(nint)ptr:X}");
             }
         }
 
@@ -122,7 +115,7 @@ public class Debug
         var unknowns = GetUnknownElements();
         if (ImGui.Button("Find unknown IDs")) {
             foreach (var v in unknowns) {
-                Plugin.Log.Information($"Unknown ID: {v.id}");
+                Service.Log.Information($"Unknown ID: {v.id}");
             }
         }
 
@@ -143,37 +136,37 @@ public class Debug
                     continue;
                 }
 
-                Plugin.Log.Information(currElem.id.ToString());
-                Plugin.ChatGui.Print(currElem.id.ToString());
+                Service.Log.Information(currElem.id.ToString());
+                Service.ChatGui.Print(currElem.id.ToString());
             }
         }
 
         if (ImGui.Button("Print current slot")) {
             var slot = Hud.GetActiveHudSlot();
-            Plugin.ChatGui.Print($"{slot} ({(int)slot})");
+            Service.ChatGui.Print($"{slot} ({(int)slot})");
         }
 
         if (ImGui.Button("Print player status address")) {
-            Plugin.ChatGui.Print($"{Plugin.ClientState.LocalPlayer:X}");
+            Service.ChatGui.Print($"{Service.ClientState.LocalPlayer:X}");
         }
 
         if (ImGui.Button("Print Config")) {
             unsafe {
-                Plugin.ChatGui.Print($"{(IntPtr)Framework.Instance()->SystemConfig.SystemConfigBase.ConfigBase.ConfigEntry:X}");
+                Service.ChatGui.Print($"{(IntPtr)Framework.Instance()->SystemConfig.SystemConfigBase.ConfigBase.ConfigEntry:X}");
             }
         }
 
         if (ImGui.Button("FATE Status")) {
-            Plugin.Log.Information($"Level: {Plugin.ClientState.LocalPlayer?.Level}");
-            Plugin.Log.Information($"IsInFate: {Statuses.IsInFate()}");
-            Plugin.Log.Information($"IsLevelSynced: {Statuses.IsLevelSynced()}");
+            Service.Log.Information($"Level: {Service.ClientState.LocalPlayer?.Level}");
+            Service.Log.Information($"IsInFate: {Statuses.IsInFate()}");
+            Service.Log.Information($"IsLevelSynced: {Statuses.IsLevelSynced()}");
         }
 
         if (ImGui.Button("Print ClassJob dict values")) {
             var s = "";
-            foreach (var row in Plugin.DataManager.GetExcelSheet<ClassJob>())
+            foreach (var row in Service.DataManager.GetExcelSheet<ClassJob>())
                 s += $"[{row.RowId}] = \"{row.Abbreviation}\",\n";
-            Plugin.ChatGui.Print(s);
+            Service.ChatGui.Print(s);
         }
 
         ImGui.EndTabItem();
@@ -216,7 +209,7 @@ public class Debug
                 continue;
             }
 
-            ImGui.TextUnformatted(element.Id.LocalisedName(Plugin.DataManager));
+            ImGui.TextUnformatted(element.Id.LocalisedName());
 
             ImGui.End();
         }

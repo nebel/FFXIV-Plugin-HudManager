@@ -5,13 +5,6 @@ namespace HUDManager.Ui;
 
 internal class FirstUseWarning
 {
-    private readonly Plugin _plugin;
-
-    public FirstUseWarning(Plugin plugin)
-    {
-        _plugin = plugin;
-    }
-
     public void Draw(ref bool update)
     {
         if (ImGui.BeginTabItem("About")) {
@@ -29,9 +22,9 @@ internal class FirstUseWarning
             ImGui.Separator();
             ImGui.TextUnformatted("If you have read all of the above and are okay with continuing, check the box below to enable HUD Manager. You only need to do this once.");
             ImGui.PopTextWrapPos();
-            var understandsRisks = _plugin.Config.UnderstandsRisks;
+            var understandsRisks = Plugin.Config.UnderstandsRisks;
             if (ImGui.Checkbox("I understand", ref understandsRisks)) {
-                _plugin.Config.UnderstandsRisks = understandsRisks;
+                Plugin.Config.UnderstandsRisks = understandsRisks;
                 update = true;
             }
 

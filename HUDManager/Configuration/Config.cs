@@ -12,8 +12,6 @@ public class Config : IPluginConfiguration
 
     public int Version { get; set; } = LatestVersion;
 
-    private IDalamudPluginInterface Interface { get; set; } = null!;
-
     public bool FirstRun { get; set; } = true;
     public bool UnderstandsRisks { get; set; }
 
@@ -35,13 +33,8 @@ public class Config : IPluginConfiguration
 
     public List<CustomCondition> CustomConditions { get; } = [];
 
-    public void Initialize(IDalamudPluginInterface pluginInterface)
-    {
-        Interface = pluginInterface;
-    }
-
     public void Save()
     {
-        Interface.SavePluginConfig(this);
+        Service.Interface.SavePluginConfig(this);
     }
 }

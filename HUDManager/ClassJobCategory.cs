@@ -35,19 +35,19 @@ public static class ClassJobCategoryIdExtensions
 
     private static bool Initialized => _activationConditions is not null && _displayNames is not null;
 
-    public static void Initialize(Plugin plugin)
+    public static void Initialize()
     {
-        var sheet = plugin.DataManager.GetExcelSheet<RawRow>(name: "ClassJobCategory");
+        var sheet = Service.DataManager.GetExcelSheet<RawRow>(name: "ClassJobCategory");
 
         _activationConditions = new Dictionary<ClassJobCategoryId, Dictionary<uint, bool>>();
         _displayNames = new Dictionary<ClassJobCategoryId, string>();
 
-        var classJobSheet = plugin.DataManager.GetExcelSheet<ClassJob>();
+        var classJobSheet = Service.DataManager.GetExcelSheet<ClassJob>();
         var classJobIds = classJobSheet.Select(j => j.RowId).ToList();
 
         foreach (var cat in Enum.GetValues(typeof(ClassJobCategoryId)).Cast<ClassJobCategoryId>()) {
             // Display name
-            _displayNames[cat] = cat.DisplayName(plugin);
+            _displayNames[cat] = cat.DisplayName();
 
             // Activation conditions
             _activationConditions[cat] = cat.IsActivatedAll(sheet, classJobIds);
@@ -88,7 +88,7 @@ public static class ClassJobCategoryIdExtensions
         }
     }
 
-    public static string DisplayName(this ClassJobCategoryId cat, Plugin plugin)
+    public static string DisplayName(this ClassJobCategoryId cat)
     {
         if (!Initialized)
             throw new InvalidOperationException("call `Initialize` first");
@@ -104,7 +104,7 @@ public static class ClassJobCategoryIdExtensions
             };
         }
 
-        var row = plugin.DataManager.GetExcelSheet<ClassJobCategory>()!.GetRow((uint)cat)!;
+        var row = Service.DataManager.GetExcelSheet<ClassJobCategory>()!.GetRow((uint)cat)!;
 
         if (ClassJobCombos.Contains(cat)) {
             var nameSplit = row.Name.ToString().Split(' ');
@@ -128,7 +128,7 @@ public static class ClassJobCategoryIdExtensions
         }
 
         // Apply custom corrections for English clients
-        if (plugin.ClientState.ClientLanguage is ClientLanguage.English) {
+        if (Service.ClientState.ClientLanguage is ClientLanguage.English) {
             return cat switch
             {
                 ClassJobCategoryId.DoW => "DoW",

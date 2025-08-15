@@ -7,18 +7,16 @@ namespace HUDManager.Ui.Editor.Tabs;
 
 internal class ExternalElements
 {
-    private Plugin Plugin { get; }
     private Interface Ui { get; }
 
-    public ExternalElements(Plugin plugin, Interface ui)
+    public ExternalElements(Interface ui)
     {
-        Plugin = plugin;
         Ui = ui;
 
         _elements =
         [
-            new Browsingway(Plugin),
-            new CrossUp(Plugin),
+            new Browsingway(),
+            new CrossUp(),
         ];
     }
 

@@ -11,7 +11,6 @@ public class QoLBarIpc
     public const int IndexUnset = -1;
     public const int IndexRemoved = -2;
 
-    private readonly Plugin _plugin;
     private string[] _conditionList = [];
     private Dictionary<int, ConditionState> _cache = new();
 
@@ -59,7 +58,7 @@ public class QoLBarIpc
             return _conditionList;
         }
         catch (Exception e) {
-            _plugin.Log.Warning(e, "Error fetching QoL Bar condition sets");
+            Service.Log.Warning(e, "Error fetching QoL Bar condition sets");
             return [];
         }
     }
@@ -104,10 +103,10 @@ public class QoLBarIpc
 
     private void OnMovedConditionSet(int from, int to)
     {
-        _plugin.Log.Debug($"QoL Bar conditions swapped: {from} <-> {to}");
+        Service.Log.Debug($"QoL Bar conditions swapped: {from} <-> {to}");
 
         var changed = false;
-        foreach (var condition in _plugin.Config.CustomConditions) {
+        foreach (var condition in Plugin.Config.CustomConditions) {
             if (condition.ConditionType == CustomConditionType.QoLBarCondition) {
                 if (condition.ExternalIndex == from) {
                     condition.ExternalIndex = to;
@@ -120,7 +119,7 @@ public class QoLBarIpc
         }
 
         if (changed) {
-            _plugin.Config.Save();
+            Plugin.Config.Save();
         }
 
         ClearCache();
@@ -128,10 +127,10 @@ public class QoLBarIpc
 
     private void OnRemovedConditionSet(int removed)
     {
-        _plugin.Log.Debug($"QoL Bar condition removed: {removed}");
+        Service.Log.Debug($"QoL Bar condition removed: {removed}");
 
         var changed = false;
-        foreach (var condition in _plugin.Config.CustomConditions) {
+        foreach (var condition in Plugin.Config.CustomConditions) {
             if (condition.ConditionType == CustomConditionType.QoLBarCondition && condition.ExternalIndex == removed) {
                 condition.ExternalIndex = -2;
                 changed = true;
@@ -139,7 +138,7 @@ public class QoLBarIpc
         }
 
         if (changed) {
-            _plugin.Config.Save();
+            Plugin.Config.Save();
         }
 
         ClearCache();
@@ -155,18 +154,16 @@ public class QoLBarIpc
         }
     }
 
-    public QoLBarIpc(Plugin plugin)
+    public QoLBarIpc()
     {
-        _plugin = plugin;
-
-        _qolBarInitializedSubscriber = plugin.Interface.GetIpcSubscriber<object>("QoLBar.Initialized");
-        _qolBarDisposedSubscriber = plugin.Interface.GetIpcSubscriber<object>("QoLBar.Disposed");
-        _qolBarGetIpcVersionSubscriber = plugin.Interface.GetIpcSubscriber<int>("QoLBar.GetIPCVersion");
-        _qolBarGetVersionSubscriber = plugin.Interface.GetIpcSubscriber<string>("QoLBar.GetVersion");
-        _qolBarGetConditionSetsProvider = plugin.Interface.GetIpcSubscriber<string[]>("QoLBar.GetConditionSets");
-        _qolBarCheckConditionSetProvider = plugin.Interface.GetIpcSubscriber<int, bool>("QoLBar.CheckConditionSet");
-        _qolBarMovedConditionSetProvider = plugin.Interface.GetIpcSubscriber<int, int, object>("QoLBar.MovedConditionSet");
-        _qolBarRemovedConditionSetProvider = plugin.Interface.GetIpcSubscriber<int, object>("QoLBar.RemovedConditionSet");
+        _qolBarInitializedSubscriber = Service.Interface.GetIpcSubscriber<object>("QoLBar.Initialized");
+        _qolBarDisposedSubscriber = Service.Interface.GetIpcSubscriber<object>("QoLBar.Disposed");
+        _qolBarGetIpcVersionSubscriber = Service.Interface.GetIpcSubscriber<int>("QoLBar.GetIPCVersion");
+        _qolBarGetVersionSubscriber = Service.Interface.GetIpcSubscriber<string>("QoLBar.GetVersion");
+        _qolBarGetConditionSetsProvider = Service.Interface.GetIpcSubscriber<string[]>("QoLBar.GetConditionSets");
+        _qolBarCheckConditionSetProvider = Service.Interface.GetIpcSubscriber<int, bool>("QoLBar.CheckConditionSet");
+        _qolBarMovedConditionSetProvider = Service.Interface.GetIpcSubscriber<int, int, object>("QoLBar.MovedConditionSet");
+        _qolBarRemovedConditionSetProvider = Service.Interface.GetIpcSubscriber<int, object>("QoLBar.RemovedConditionSet");
 
         _qolBarInitializedSubscriber.Subscribe(Enable);
         _qolBarDisposedSubscriber.Subscribe(Disable);
@@ -182,7 +179,7 @@ public class QoLBarIpc
             return;
         }
 
-        _plugin.Log.Debug("Enabling QoLBar IPC");
+        Service.Log.Debug("Enabling QoLBar IPC");
         Enabled = true;
         ClearCache();
     }
@@ -193,7 +190,7 @@ public class QoLBarIpc
             return;
         }
 
-        _plugin.Log.Debug("Disabling QoLBar IPC");
+        Service.Log.Debug("Disabling QoLBar IPC");
         Enabled = false;
         ClearCache();
     }

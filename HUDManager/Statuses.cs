@@ -16,8 +16,6 @@ namespace HUDManager;
 
 public class Statuses
 {
-    private Plugin Plugin { get; }
-
     public readonly Dictionary<Status, bool> Condition = new();
     private readonly Status[] _statusTypes = Enum.GetValues<Status>();
     private uint _lastJobId = uint.MaxValue;
@@ -39,10 +37,8 @@ public class Statuses
         EditLockRemoved,
     }
 
-    public Statuses(Plugin plugin)
+    public Statuses()
     {
-        Plugin = plugin;
-
         foreach (var cond in Plugin.Config.CustomConditions) {
             CustomConditionStatus[cond] = false;
         }
@@ -52,7 +48,7 @@ public class Statuses
     {
         UpdateConditionHoldTimers();
 
-        var player = Plugin.ClientState.LocalPlayer;
+        var player = Service.ClientState.LocalPlayer;
         if (player is null) {
             return false;
         }
@@ -68,14 +64,14 @@ public class Statuses
 
         foreach (var status in _statusTypes) {
             if (Condition.TryGetValue(status, out var oldVal)) {
-                var newVal = status.Active(Plugin, player);
+                var newVal = status.Active(player);
                 if (newVal != oldVal) {
                     anyChanged = true;
                     Condition[status] = newVal;
                 }
             }
             else {
-                var newVal = status.Active(Plugin, player);
+                var newVal = status.Active(player);
                 anyChanged |= newVal != oldVal;
                 Condition[status] = newVal;
             }
@@ -90,17 +86,17 @@ public class Statuses
     private (HudConditionMatch? layoutId, List<HudConditionMatch> layers) CalculateResultantLayout()
     {
         List<HudConditionMatch> layers = [];
-        var player = Plugin.ClientState.LocalPlayer;
+        var player = Service.ClientState.LocalPlayer;
         if (player == null) {
             return (null, layers);
         }
 
         foreach (var match in Plugin.Config.HudConditionMatches) {
-            var isActivated = match.IsActivated(Plugin, out var transitioned);
+            var isActivated = match.IsActivated(out var transitioned);
             var startTimer = !isActivated && transitioned && match.CustomCondition?.HoldTime > 0;
             if (isActivated || startTimer) {
                 if (startTimer) {
-                    Plugin.Log.Debug($"Starting timer for \"{match.CustomCondition?.Name}\" ({match.CustomCondition?.HoldTime}s)");
+                    Service.Log.Debug($"Starting timer for \"{match.CustomCondition?.Name}\" ({match.CustomCondition?.HoldTime}s)");
                     _conditionHoldTimers[match] = match.CustomCondition?.HoldTime ?? 0;
                 }
 
@@ -129,12 +125,12 @@ public class Statuses
         }
 
         if (!Plugin.Config.Layouts.ContainsKey(ResultantLayout.activeLayout.LayoutId)) {
-            Plugin.Log.Error($"Attempt to set nonexistent layout \"{ResultantLayout.activeLayout.LayoutId}\".");
+            Service.Log.Error($"Attempt to set nonexistent layout \"{ResultantLayout.activeLayout.LayoutId}\".");
             return;
         }
 
         if (forceState != ForceState.None) {
-            Plugin.Log.Debug($"Forcing full layout write (reason={forceState})");
+            Service.Log.Debug($"Forcing full layout write (reason={forceState})");
             Plugin.Hud.WriteEffectiveLayout(Plugin.Config.StagingSlot, ResultantLayout.activeLayout.LayoutId, ResultantLayout.layeredLayouts.ConvertAll(match => match.LayoutId));
         } else {
             Plugin.Hud.WriteEffectiveLayoutIfChanged(Plugin.Config.StagingSlot, ResultantLayout.activeLayout.LayoutId, ResultantLayout.layeredLayouts.ConvertAll(match => match.LayoutId));
@@ -169,18 +165,18 @@ public class Statuses
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static unsafe bool IsRoleplaying(Plugin plugin, IPlayerCharacter? player)
+    public static unsafe bool IsRoleplaying(IPlayerCharacter? player)
     {
-        player ??= plugin.ClientState.LocalPlayer;
+        player ??= Service.ClientState.LocalPlayer;
         if (player == null)
             return false;
         return ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)player.Address)->OnlineStatus == 22;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsWeaponOut(Plugin plugin, IPlayerCharacter? player)
+    public static bool IsWeaponOut(IPlayerCharacter? player)
     {
-        player ??= plugin.ClientState.LocalPlayer;
+        player ??= Service.ClientState.LocalPlayer;
         if (player == null)
             return false;
         return (player.StatusFlags & StatusFlags.WeaponOut) != 0;
@@ -194,7 +190,7 @@ public class Statuses
         foreach (var (k, v) in _conditionHoldTimers) {
             var newVal = v - (float)((double)(newTimestamp - _lastUpdateTime) / 1000);
             if (newVal < 0) {
-                Plugin.Log.Debug($"Condition timer for \"{k.CustomCondition?.Name}\" finished");
+                Service.Log.Debug($"Condition timer for \"{k.CustomCondition?.Name}\" finished");
                 removeKeys.Add(k);
             }
             else {
@@ -261,20 +257,20 @@ public class HudConditionMatch
 
     private bool LastValue { get; set; }
 
-    public bool IsActivated(Plugin plugin, out bool transitioned)
+    public bool IsActivated(out bool transitioned)
     {
         transitioned = false;
 
-        var player = plugin.ClientState.LocalPlayer;
+        var player = Service.ClientState.LocalPlayer;
         if (player is null) {
-            plugin.Log.Warning("can't check job activation when player is null");
+            Service.Log.Warning("can't check job activation when player is null");
             return false;
         }
 
-        var statusMet = !Status.HasValue || plugin.Statuses.Condition[Status.Value];
-        var customConditionMet = CustomCondition?.IsMet(plugin) ?? true;
+        var statusMet = !Status.HasValue || Plugin.Statuses.Condition[Status.Value];
+        var customConditionMet = CustomCondition?.IsMet() ?? true;
         var jobMet = ClassJobCategory is null
-            || ClassJobCategory.Value.IsActivated(plugin.ClientState.LocalPlayer!.ClassJob.Value);
+            || ClassJobCategory.Value.IsActivated(Service.ClientState.LocalPlayer!.ClassJob.Value);
 
         var newValue = statusMet && customConditionMet && jobMet;
         if (LastValue != newValue) {
@@ -354,25 +350,25 @@ public static class StatusExtensions
 
     }
 
-    public static bool Active(this Status status, Plugin plugin, IPlayerCharacter? player = null)
+    public static bool Active(this Status status, IPlayerCharacter? player = null)
     {
         if (status > 0) {
-            return plugin.Condition[(ConditionFlag)status];
+            return Service.Condition[(ConditionFlag)status];
         }
 
         switch (status) {
             case Status.WeaponDrawn:
-                return Statuses.IsWeaponOut(plugin, player);
+                return Statuses.IsWeaponOut(player);
             case Status.Roleplaying:
-                return Statuses.IsRoleplaying(plugin, player);
+                return Statuses.IsRoleplaying(player);
             case Status.PlayingMusic:
-                return plugin.Condition[ConditionFlag.Performing];
+                return Service.Condition[ConditionFlag.Performing];
             case Status.InPvp:
-                return plugin.ClientState.IsPvP;
+                return Service.ClientState.IsPvP;
             case Status.InDialogue:
-                return plugin.Condition[ConditionFlag.OccupiedInEvent]
-                    | plugin.Condition[ConditionFlag.OccupiedInQuestEvent]
-                    | plugin.Condition[ConditionFlag.OccupiedSummoningBell];
+                return Service.Condition[ConditionFlag.OccupiedInEvent]
+                       | Service.Condition[ConditionFlag.OccupiedInQuestEvent]
+                       | Service.Condition[ConditionFlag.OccupiedSummoningBell];
             case Status.InFate:
                 return Statuses.IsInFate();
             case Status.InFateLevelSynced:
@@ -382,15 +378,15 @@ public static class StatusExtensions
             case Status.ChatFocused:
                 return Statuses.IsChatFocused();
             case Status.InputModeKbm:
-                return !Util.GamepadModeActive(plugin);
+                return !Util.GamepadModeActive();
             case Status.InputModeGamepad:
-                return Util.GamepadModeActive(plugin);
+                return Util.GamepadModeActive();
             case Status.Windowed:
-                return !Util.FullScreen(plugin);
+                return !Util.FullScreen();
             case Status.FullScreen:
-                return Util.FullScreen(plugin);
+                return Util.FullScreen();
             default:
-                plugin.Log.Warning($"Unknown status: {status}, returning false");
+                Service.Log.Warning($"Unknown status: {status}, returning false");
                 return false;
         }
     }
