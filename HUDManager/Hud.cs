@@ -1,12 +1,12 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using FFXIVClientStructs.Interop;
 using HUDManager.Configuration;
 using HUDManager.Structs;
 using HUDManager.Structs.External;
 using HUDManager.Tree;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 
@@ -14,91 +14,76 @@ namespace HUDManager;
 
 public sealed class Hud : IDisposable
 {
-    public const int InMemoryLayoutElements = 110; // Updated 7.2
-    // Each element is 32 bytes in ADDON.DAT, but they're 36 bytes when loaded into memory.
-    private const int LayoutSize = InMemoryLayoutElements * 36; // Updated 7.2 (same since 5.45)
+    // ReSharper disable UnusedMember.Local -- Used for debugging during patches. Confirmed as of patch 7.30hf1
+    public const int InMemoryLayoutElements = 110;
+    private const int LayoutSize = InMemoryLayoutElements * 36; // 32 bytes in ADDON.DAT, 36 when loaded into memory
 
-    private const int DataSlotOffset = 0xD270; // Updated 7.2
-    private const int DataBaseLayoutOffset = 0x9490; // Updated 7.2
-    private const int DataDefaultLayoutOffset = 0x35F8; // Updated 6.51 (note: unused except in debug window, not sure of exact structure)
+    private const int ModuleDataOffset = 0x58;
+    private const int DataSlotOffset = 0xD270;
+    private const int DataBaseLayoutOffset = 0x9490;
+    // ReSharper restore UnusedMember.Local
 
     private StagingState? _stagingState;
 
     private record StagingState(uint JobId, Guid LayoutId, List<Guid> LayerIds)
     {
-        public bool SameLayers(Guid layoutId, List<Guid> layerIds) => LayoutId == layoutId && LayerIds.SequenceEqual(layerIds);
+        public bool SameLayers(Guid layoutId, List<Guid> layerIds) =>
+            LayoutId == layoutId && LayerIds.SequenceEqual(layerIds);
+
         public bool SameJob(uint playerJobId) => JobId == playerJobId;
     }
 
     public unsafe void SelectSlot(HudSlot slot, bool force = false)
     {
-        // change the current slot so the game lets us pick one that's currently in use
-        if (!force) {
-            goto Return;
-        }
-
-        var currentSlotPtr = (uint*)(GetDataPointer() + DataSlotOffset);
         // read the current slot
-        var currentSlot = *currentSlotPtr;
+        var currentSlot = GetActiveHudSlot();
         // if the current slot is the slot we want to change to, we can force a reload by
         // telling the game it's on a different slot and swapping back to the desired slot
-        if (currentSlot == (uint)slot) {
-            var backupSlot = currentSlot;
-            if (backupSlot < 3) {
-                backupSlot += 1;
-            } else {
-                backupSlot = 0;
-            }
+        if (slot == currentSlot) {
+            var backupSlot = currentSlot == HudSlot.Four ? HudSlot.One : currentSlot + 1;
 
             // back up this different slot
-            var backup = ReadLayout((HudSlot)backupSlot);
+            var backup = ReadLayout(backupSlot);
             // change the current slot in memory
-            *currentSlotPtr = backupSlot;
+            SetActiveHudSlot(backupSlot);
 
             // ask the game to change slot to our desired slot
             // for some reason, this overwrites the current slot, so this is why we back up
             AddonConfig.Instance()->ChangeHudLayout((uint)slot);
             // restore the backup
-            WriteLayout((HudSlot)backupSlot, backup, false);
-            return;
+            WriteLayout(backupSlot, backup, false);
+        } else {
+            AddonConfig.Instance()->ChangeHudLayout((uint)slot);
         }
-
-        Return:
-        AddonConfig.Instance()->ChangeHudLayout((uint)slot);
     }
 
-    public static unsafe IntPtr GetDataPointer()
+    public static unsafe AddonConfigData* GetAddonConfigData()
     {
-        return (nint)AddonConfig.Instance()->ModuleData;
+        // return *(AddonConfigData**)((nint)AddonConfig.Instance() + ModuleDataOffset);
+        return AddonConfig.Instance()->ModuleData;
     }
 
-    internal static IntPtr GetDefaultLayoutPointer()
+    public static unsafe AddonConfigEntry* GetLayoutPointer(HudSlot slot)
     {
-        return GetDataPointer() + DataDefaultLayoutOffset;
+        // return (AddonConfigEntry*)((nint)GetAddonConfigData() + DataBaseLayoutOffset + (int)slot * LayoutSize);
+        return GetAddonConfigData()->HudLayoutConfigEntries.GetPointer((int)slot * InMemoryLayoutElements);
     }
 
-    internal static unsafe IntPtr GetLayoutPointer(HudSlot slot)
+    public static unsafe HudSlot GetActiveHudSlot()
     {
-        var slotNum = (int)slot;
-        return (nint)AddonConfig.Instance()->ModuleData + DataBaseLayoutOffset + slotNum * LayoutSize;
+        // return (HudSlot)Marshal.ReadInt32((nint)GetAddonConfigData() + DataSlotOffset);
+        return (HudSlot)GetAddonConfigData()->CurrentHudLayout;
     }
 
-    public static HudSlot GetActiveHudSlot()
+    private static unsafe void SetActiveHudSlot(HudSlot slot)
     {
-        var slotVal = Marshal.ReadInt32(GetDataPointer() + DataSlotOffset);
-        // Plugin.SLog.Debug($"dataPointer(0x{GetDataPointer():X} + offset 0x{DataSlotOffset:X} = 0x{GetDataPointer() + DataSlotOffset:X} = {slotVal}");
-
-        if (!Enum.IsDefined(typeof(HudSlot), slotVal)) {
-            throw new IOException($"invalid hud slot in FFXIV memory of ${slotVal}");
-        }
-
-        return (HudSlot)slotVal;
+        // return (HudSlot)Marshal.ReadInt32((nint)GetAddonConfigData() + DataSlotOffset);
+        GetAddonConfigData()->CurrentHudLayout = (int)slot;
     }
 
-    public static Layout ReadLayout(HudSlot slot)
+    public static unsafe Layout ReadLayout(HudSlot slot)
     {
-        var slotPtr = GetLayoutPointer(slot);
-        return Marshal.PtrToStructure<Layout>(slotPtr);
+        return Marshal.PtrToStructure<Layout>((nint)GetLayoutPointer(slot));
     }
 
     private void WriteLayout(HudSlot slot, Layout layout, bool reloadIfNecessary = true)
@@ -106,56 +91,59 @@ public sealed class Hud : IDisposable
         WriteLayout(slot, layout.ToDictionary(), reloadIfNecessary);
     }
 
-    private void WriteLayout(HudSlot slot, IReadOnlyDictionary<ElementKind, Element> dict, bool reloadIfNecessary = true)
+    private unsafe void WriteLayout(HudSlot slot, IReadOnlyDictionary<ElementKind, Element> dict,
+        bool reloadIfNecessary = true)
     {
-        var slotPtr = GetLayoutPointer(slot);
+        var slotPtr = (nint)GetLayoutPointer(slot);
 
         // update existing elements with saved data instead of wholesale overwriting
         var slotLayout = ReadLayout(slot);
 #if !READONLY
-            for (var i = 0; i < slotLayout.elements.Length; i++) {
-                if (!slotLayout.elements[i].id.IsRealElement())
-                    continue;
+        for (var i = 0; i < slotLayout.elements.Length; i++) {
+            if (!slotLayout.elements[i].id.IsRealElement())
+                continue;
 
-                if (!dict.TryGetValue(slotLayout.elements[i].id, out var element))
-                    continue;
+            if (!dict.TryGetValue(slotLayout.elements[i].id, out var element))
+                continue;
 
-                if (reloadIfNecessary) {
-                    if (element.Id is ElementKind.Minimap) {
-                        // Minimap: Don't load zoom/rotation from HUD settings but use current UI state instead
-                        element = element.Clone();
-                        element.Options = slotLayout.elements[i].options;
-                    } else if (element.Id is ElementKind.Hotbar1
-                               && (element.LayoutFlags & ElementLayoutFlags.ClobberTransientOptions) == 0) { // Clobber flag is unset (default)
-                        // Hotbar1: Keep cycling state
-                        element = element.Clone();
-                        element.Options![0] = slotLayout.elements[i].options![0];
-                    }
+            if (reloadIfNecessary) {
+                if (element.Id is ElementKind.Minimap) {
+                    // Minimap: Don't load zoom/rotation from HUD settings but use current UI state instead
+                    element = element.Clone();
+                    element.Options = slotLayout.elements[i].options;
                 }
-
-                // just replace the struct if all options are enabled
-                if (element.Enabled == Element.AllEnabled) {
-                    slotLayout.elements[i] = new RawElement(element);
-                    continue;
+                else if (element.Id is ElementKind.Hotbar1
+                         && (element.LayoutFlags & ElementLayoutFlags.ClobberTransientOptions) == 0) {
+                    // Clobber flag is unset (default)
+                    // Hotbar1: Keep cycling state
+                    element = element.Clone();
+                    element.Options![0] = slotLayout.elements[i].options![0];
                 }
-
-                // otherwise only replace the enabled options
-                slotLayout.elements[i].UpdateEnabled(element);
             }
 
-            Marshal.StructureToPtr(slotLayout, slotPtr, false);
-
-            // copy directly over
-            // Marshal.StructureToPtr(layout, slotPtr, false);
-
-            if (!reloadIfNecessary) {
-                return;
+            // just replace the struct if all options are enabled
+            if (element.Enabled == Element.AllEnabled) {
+                slotLayout.elements[i] = new RawElement(element);
+                continue;
             }
 
-            var currentSlot = GetActiveHudSlot();
-            if (currentSlot == slot) {
-                SelectSlot(currentSlot, true);
-            }
+            // otherwise only replace the enabled options
+            slotLayout.elements[i].UpdateEnabled(element);
+        }
+
+        Marshal.StructureToPtr(slotLayout, slotPtr, false);
+
+        // copy directly over
+        // Marshal.StructureToPtr(layout, slotPtr, false);
+
+        if (!reloadIfNecessary) {
+            return;
+        }
+
+        var currentSlot = GetActiveHudSlot();
+        if (currentSlot == slot) {
+            SelectSlot(currentSlot, true);
+        }
 #endif
     }
 
@@ -209,7 +197,6 @@ public sealed class Hud : IDisposable
             }
 
             crossUpConfig = node.Value.CrossUpConfig?.Clone();
-
         }
 
         // get the ancestors and their elements for this node
@@ -243,7 +230,8 @@ public sealed class Hud : IDisposable
         if (_stagingState != null && _stagingState.SameLayers(id, layers)) {
             if (_stagingState.SameJob(Util.GetPlayerJobId())) {
                 Service.Log.Debug($"Skipped layout {GetDebugName(id, layers)} (state unchanged)");
-            } else {
+            }
+            else {
                 Service.Log.Debug($"Skipped layout {GetDebugName(id, layers)} (gauge changes only)");
                 WriteEffectiveLayoutGaugesOnly(id, layers);
             }
@@ -299,7 +287,7 @@ public sealed class Hud : IDisposable
     private void Import(string name, Layout layout, bool save = true)
     {
         var guid = Plugin.Config.Layouts.FirstOrDefault(kv => kv.Value.Name == name).Key;
-        guid = guid != default ? guid : Guid.NewGuid();
+        guid = guid != Guid.Empty ? guid : Guid.NewGuid();
 
         Plugin.Config.Layouts[guid] = new SavedLayout(name, layout);
         if (save) {
@@ -314,7 +302,8 @@ public sealed class Hud : IDisposable
 
         var jobIndex = Service.ClientState.LocalPlayer!.ClassJob.ValueNullable?.JobIndex ?? 0;
         foreach (var (kind, element) in effectiveLayout.Elements) {
-            if (kind.ClassJob() is { } classJob && classJob.JobIndex == jobIndex && element[ElementComponent.Visibility]) {
+            if (kind.ClassJob() is { } classJob && classJob.JobIndex == jobIndex &&
+                element[ElementComponent.Visibility]) {
                 ApplyJobGaugeVisibility(kind, element);
             }
         }
@@ -333,7 +322,8 @@ public sealed class Hud : IDisposable
             if (unit->UldManager.NodeListCount == 0)
                 unit->UldManager.UpdateDrawNodeList();
             unit->IsVisible = true;
-        } else {
+        }
+        else {
             // Hide element.
             if (unit->UldManager.NodeListCount > 0)
                 unit->UldManager.NodeListCount = 0;
