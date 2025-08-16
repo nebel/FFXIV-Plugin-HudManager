@@ -16,7 +16,7 @@ public sealed class Hud : IDisposable
 {
     // ReSharper disable UnusedMember.Local -- Used for debugging during patches. Confirmed as of patch 7.30hf1
     public const int InMemoryLayoutElements = 110;
-    private const int LayoutSize = InMemoryLayoutElements * 36; // 32 bytes in ADDON.DAT, 36 when loaded into memory
+    private const int LayoutSize = InMemoryLayoutElements * 0x24; // 32 (0x20) bytes in ADDON.DAT, 36 (0x24) in memory
 
     private const int ModuleDataOffset = 0x58;
     private const int DataSlotOffset = 0xD270;
@@ -36,6 +36,12 @@ public sealed class Hud : IDisposable
     public unsafe void SelectSlot(HudSlot slot)
     {
 #if OLD_SELECT_STYLE
+        static void SetActiveHudSlot(HudSlot slot)
+        {
+            // return (HudSlot)Marshal.ReadInt32((nint)GetAddonConfigData() + DataSlotOffset);
+            GetAddonConfigData()->CurrentHudLayout = (int)slot;
+        }
+
         // read the current slot
         var currentSlot = GetActiveHudSlot();
         // if the current slot is the slot we want to change to, we can force a reload by
@@ -52,7 +58,7 @@ public sealed class Hud : IDisposable
             // for some reason, this overwrites the current slot, so this is why we back up
             AddonConfig.Instance()->ChangeHudLayout((uint)slot);
             // restore the backup
-            WriteLayout(backupSlot, backup, false);
+            WriteLayout(backupSlot, backup.ToDictionary(), false);
         } else {
             AddonConfig.Instance()->ChangeHudLayout((uint)slot);
         }
@@ -83,20 +89,9 @@ public sealed class Hud : IDisposable
         return (HudSlot)GetAddonConfigData()->CurrentHudLayout;
     }
 
-    private static unsafe void SetActiveHudSlot(HudSlot slot)
-    {
-        // return (HudSlot)Marshal.ReadInt32((nint)GetAddonConfigData() + DataSlotOffset);
-        GetAddonConfigData()->CurrentHudLayout = (int)slot;
-    }
-
     public static unsafe Layout ReadLayout(HudSlot slot)
     {
         return Marshal.PtrToStructure<Layout>((nint)GetLayoutPointer(slot));
-    }
-
-    private void WriteLayout(HudSlot slot, Layout layout, bool reloadIfNecessary = true)
-    {
-        WriteLayout(slot, layout.ToDictionary(), reloadIfNecessary);
     }
 
     private unsafe void WriteLayout(HudSlot slot, IReadOnlyDictionary<ElementKind, Element> dict,
